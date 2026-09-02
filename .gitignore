@@ -1,0 +1,61 @@
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*.so
+
+# ==============================
+# Jupyter / Colab
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# Secrets
+# ==============================
+.env
+*.env
+credentials.json
+token.json
+*.key
+*.pem
+
+# ==============================
+# Dataset / Large Data
+# ==============================
+data/audio/
+data/raw/
+data/processed/
+data/transcripts/
+data/references/
+data/vad/
+data/dialogue_acts/
+
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.m4a
+*.flac
+
+# ==============================
+# Model weights / caches
+# ==============================
+models/
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# ==============================
+# Generated outputs
+# ==============================
+outputs/
+
+# ==============================
+# OS
+# ==============================
+.DS_Store
+Thumbs.db
+00_setup/00_git_setup.ipynb
