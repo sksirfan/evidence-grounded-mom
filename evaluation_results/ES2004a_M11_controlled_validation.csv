@@ -1,0 +1,6 @@
+test_id,test_type,expected_status,actual_status,correct_detection,failed_checks,evidence_ids
+M11-01,POSITIVE_CONTROL,VERIFIED,VERIFIED,True,,15
+M11-02,WRONG_CONTENT,FLAGGED,FLAGGED,True,"content_consistency, speaker_consistency",
+M11-03,WRONG_SPEAKER,FLAGGED,FLAGGED,True,"content_consistency, speaker_consistency",
+M11-04,WRONG_EVENT_TYPE,FLAGGED,FLAGGED,True,event_type_consistency,135
+M11-05,UNSUPPORTED_CLAIM,FLAGGED,FLAGGED,True,"content_consistency, speaker_consistency",
