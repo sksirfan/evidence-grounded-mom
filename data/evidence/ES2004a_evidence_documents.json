@@ -1,0 +1,1186 @@
+[
+  {
+    "evidence_id": 1,
+    "speaker": "SPEAKER_02",
+    "start": 10.998,
+    "end": 14.521,
+    "duration": 3.5230000000000015,
+    "text": "Are we, we're not like the dim lights, so we can see that a bit better."
+  },
+  {
+    "evidence_id": 2,
+    "speaker": "SPEAKER_01",
+    "start": 17.943,
+    "end": 18.163,
+    "duration": 0.21999999999999886,
+    "text": "Yeah."
+  },
+  {
+    "evidence_id": 3,
+    "speaker": "SPEAKER_02",
+    "start": 18.944,
+    "end": 20.945,
+    "duration": 2.0010000000000012,
+    "text": "Okay, that's fine."
+  },
+  {
+    "evidence_id": 4,
+    "speaker": "SPEAKER_02",
+    "start": 22.406,
+    "end": 23.707,
+    "duration": 1.301000000000002,
+    "text": "Am I supposed to be standing up there?"
+  },
+  {
+    "evidence_id": 5,
+    "speaker": "SPEAKER_03",
+    "start": 25.128,
+    "end": 26.509,
+    "duration": 1.3810000000000002,
+    "text": "So we've got both of these clipped on."
+  },
+  {
+    "evidence_id": 6,
+    "speaker": "SPEAKER_03",
+    "start": 29.091,
+    "end": 32.073,
+    "duration": 2.9819999999999993,
+    "text": "Is she gonna answer me? Yeah, I've got both of them."
+  },
+  {
+    "evidence_id": 7,
+    "speaker": "SPEAKER_03",
+    "start": 50.605,
+    "end": 51.346,
+    "duration": 0.7409999999999997,
+    "text": "I'm just gonna"
+  },
+  {
+    "evidence_id": 8,
+    "speaker": "SPEAKER_02",
+    "start": 80.574,
+    "end": 83.017,
+    "duration": 2.442999999999998,
+    "text": "Okay, hello everybody."
+  },
+  {
+    "evidence_id": 9,
+    "speaker": "SPEAKER_02",
+    "start": 84.658,
+    "end": 93.127,
+    "duration": 8.468999999999994,
+    "text": "I'm Sarah, the project manager, and this is our first meeting, surprisingly enough. Okay, this is our agenda."
+  },
+  {
+    "evidence_id": 10,
+    "speaker": "SPEAKER_02",
+    "start": 95.79,
+    "end": 101.315,
+    "duration": 5.5249999999999915,
+    "text": "We will do some stuff, get to know each other a bit better, feel more comfortable with each other."
+  },
+  {
+    "evidence_id": 11,
+    "speaker": "SPEAKER_02",
+    "start": 102.536,
+    "end": 105.239,
+    "duration": 2.703000000000003,
+    "text": "Then we'll go do tool training,"
+  },
+  {
+    "evidence_id": 12,
+    "speaker": "SPEAKER_02",
+    "start": 106.34,
+    "end": 109.823,
+    "duration": 3.48299999999999,
+    "text": "talk about the project plan, discuss our own ideas and everything."
+  },
+  {
+    "evidence_id": 13,
+    "speaker": "SPEAKER_02",
+    "start": 112.185,
+    "end": 115.748,
+    "duration": 3.5630000000000024,
+    "text": "And we've got 25 minutes to do that as far as I can understand."
+  },
+  {
+    "evidence_id": 14,
+    "speaker": "SPEAKER_02",
+    "start": 117.699,
+    "end": 120.921,
+    "duration": 3.2220000000000084,
+    "text": "Now, we're developing a remote control, which you probably already know."
+  },
+  {
+    "evidence_id": 15,
+    "speaker": "SPEAKER_02",
+    "start": 122.503,
+    "end": 132.29,
+    "duration": 9.786999999999992,
+    "text": "We want it to be original, something that people haven't thought of. It's not out in the shops. Trendy, appealing to a wide market, but,"
+  },
+  {
+    "evidence_id": 16,
+    "speaker": "SPEAKER_02",
+    "start": 133.291,
+    "end": 138.174,
+    "duration": 4.88300000000001,
+    "text": "you know, not a hunk of metal. And user-friendly, grannies to kids,"
+  },
+  {
+    "evidence_id": 17,
+    "speaker": "SPEAKER_02",
+    "start": 139.375,
+    "end": 141.016,
+    "duration": 1.6409999999999911,
+    "text": "maybe even pooches, should be able to use it."
+  },
+  {
+    "evidence_id": 18,
+    "speaker": "SPEAKER_02",
+    "start": 142.933,
+    "end": 160.818,
+    "duration": 17.88500000000002,
+    "text": "Okay, first is the functional design. This is where we all go off and do our individual work. What needs need to be fulfilled by the product, what effect the product has to have, and how it's actually going to do that. Conceptual design,"
+  },
+  {
+    "evidence_id": 19,
+    "speaker": "SPEAKER_02",
+    "start": 162.378,
+    "end": 167.74,
+    "duration": 5.362000000000023,
+    "text": "what we're thinking, how it's going to go, and then the detailed design, how we're actually going to put it into practice and make it work."
+  },
+  {
+    "evidence_id": 20,
+    "speaker": "SPEAKER_02",
+    "start": 170.507,
+    "end": 183.376,
+    "duration": 12.869,
+    "text": "OK, right. We're going to practice with the pens and draw our favourite animal on the whiteboard. I'll go first. And sum up the characteristics of that animal."
+  },
+  {
+    "evidence_id": 21,
+    "speaker": "SPEAKER_02",
+    "start": 184.417,
+    "end": 191.142,
+    "duration": 6.724999999999994,
+    "text": "OK, space for everyone else."
+  },
+  {
+    "evidence_id": 22,
+    "speaker": "SPEAKER_00",
+    "start": 211.441,
+    "end": 211.786,
+    "duration": 0.34499999999999886,
+    "text": "That's"
+  },
+  {
+    "evidence_id": 23,
+    "speaker": "SPEAKER_02",
+    "start": 243.2,
+    "end": 244.26,
+    "duration": 1.0600000000000023,
+    "text": "We're running out of blue."
+  },
+  {
+    "evidence_id": 24,
+    "speaker": "SPEAKER_02",
+    "start": 247.021,
+    "end": 250.583,
+    "duration": 3.562000000000012,
+    "text": "OK. I'm not going to ask you to guess. I'm going to tell you that's supposed to be a tiger."
+  },
+  {
+    "evidence_id": 25,
+    "speaker": "SPEAKER_02",
+    "start": 254.824,
+    "end": 257.165,
+    "duration": 2.341000000000008,
+    "text": "And I see them as majestic"
+  },
+  {
+    "evidence_id": 26,
+    "speaker": "SPEAKER_02",
+    "start": 260.167,
+    "end": 262.067,
+    "duration": 1.900000000000034,
+    "text": "and independent"
+  },
+  {
+    "evidence_id": 27,
+    "speaker": "SPEAKER_02",
+    "start": 266.429,
+    "end": 266.689,
+    "duration": 0.26000000000004775,
+    "text": "and"
+  },
+  {
+    "evidence_id": 28,
+    "speaker": "SPEAKER_02",
+    "start": 268.75,
+    "end": 269.03,
+    "duration": 0.2799999999999727,
+    "text": "proud."
+  },
+  {
+    "evidence_id": 29,
+    "speaker": "SPEAKER_02",
+    "start": 272.372,
+    "end": 275.833,
+    "duration": 3.4610000000000127,
+    "text": "No. Who would like to go next? Me. Okay."
+  },
+  {
+    "evidence_id": 30,
+    "speaker": "SPEAKER_01",
+    "start": 277.814,
+    "end": 279.574,
+    "duration": 1.759999999999991,
+    "text": "Wish. Cat."
+  },
+  {
+    "evidence_id": 31,
+    "speaker": "SPEAKER_01",
+    "start": 285.136,
+    "end": 286.357,
+    "duration": 1.2210000000000036,
+    "text": "Where does this come from?"
+  },
+  {
+    "evidence_id": 32,
+    "speaker": "SPEAKER_02",
+    "start": 287.677,
+    "end": 288.517,
+    "duration": 0.839999999999975,
+    "text": "There you"
+  },
+  {
+    "evidence_id": 33,
+    "speaker": "SPEAKER_01",
+    "start": 289.998,
+    "end": 291.098,
+    "duration": 1.1000000000000227,
+    "text": "go. Thank you."
+  },
+  {
+    "evidence_id": 34,
+    "speaker": "SPEAKER_01",
+    "start": 294.079,
+    "end": 295.98,
+    "duration": 1.9010000000000105,
+    "text": "Maybe you can guess what I'm trying to make."
+  },
+  {
+    "evidence_id": 35,
+    "speaker": "SPEAKER_03",
+    "start": 306.435,
+    "end": 307.176,
+    "duration": 0.7409999999999854,
+    "text": "A kind of talk."
+  },
+  {
+    "evidence_id": 36,
+    "speaker": "SPEAKER_01",
+    "start": 309.358,
+    "end": 309.618,
+    "duration": 0.2599999999999909,
+    "text": "Yeah."
+  },
+  {
+    "evidence_id": 37,
+    "speaker": "SPEAKER_01",
+    "start": 313.561,
+    "end": 321.648,
+    "duration": 8.087000000000046,
+    "text": "It's actually sitting. Sorry. It's sitting. It's not standing. Okay. I see it as one thing. It's very supportive."
+  },
+  {
+    "evidence_id": 38,
+    "speaker": "SPEAKER_01",
+    "start": 324.218,
+    "end": 331.961,
+    "duration": 7.742999999999995,
+    "text": "It's your best friend in you. You can talk to a dog. It can be your best friend. It doesn't discriminate between you based on what you are. Second, it's"
+  },
+  {
+    "evidence_id": 39,
+    "speaker": "SPEAKER_01",
+    "start": 333.542,
+    "end": 333.882,
+    "duration": 0.34000000000003183,
+    "text": "loyal."
+  },
+  {
+    "evidence_id": 40,
+    "speaker": "SPEAKER_01",
+    "start": 335.603,
+    "end": 343.846,
+    "duration": 8.242999999999995,
+    "text": "And third thing, it's got intuition. Dogs can sometimes make out between a thief and a"
+  },
+  {
+    "evidence_id": 41,
+    "speaker": "SPEAKER_01",
+    "start": 345.186,
+    "end": 349.328,
+    "duration": 4.141999999999996,
+    "text": "person. So basically, these are the three unique features I think belong to a dog."
+  },
+  {
+    "evidence_id": 42,
+    "speaker": "SPEAKER_02",
+    "start": 350.248,
+    "end": 351.009,
+    "duration": 0.7610000000000241,
+    "text": "OK. Thank you."
+  },
+  {
+    "evidence_id": 43,
+    "speaker": "SPEAKER_01",
+    "start": 351.129,
+    "end": 351.389,
+    "duration": 0.2599999999999909,
+    "text": "Thank you."
+  },
+  {
+    "evidence_id": 44,
+    "speaker": "SPEAKER_03",
+    "start": 356.877,
+    "end": 361.664,
+    "duration": 4.786999999999978,
+    "text": "Please leave me a space at the bottom, I'm little, I can get to the top. We're standing on a chair."
+  },
+  {
+    "evidence_id": 45,
+    "speaker": "SPEAKER_00",
+    "start": 361.744,
+    "end": 367.292,
+    "duration": 5.547999999999945,
+    "text": "Well, since you guys have chosen the ones I wanted to do, I have to go for something a bit random."
+  },
+  {
+    "evidence_id": 46,
+    "speaker": "SPEAKER_00",
+    "start": 371.593,
+    "end": 375.557,
+    "duration": 3.9639999999999986,
+    "text": "And also my drawing skill isn't that great. Well as you can see the quality of"
+  },
+  {
+    "evidence_id": 47,
+    "speaker": "SPEAKER_02",
+    "start": 375.577,
+    "end": 376.899,
+    "duration": 1.3220000000000027,
+    "text": "the work today. I"
+  },
+  {
+    "evidence_id": 48,
+    "speaker": "SPEAKER_03",
+    "start": 376.919,
+    "end": 378.861,
+    "duration": 1.9420000000000073,
+    "text": "think it's outstandingly good. Okay now"
+  },
+  {
+    "evidence_id": 49,
+    "speaker": "SPEAKER_00",
+    "start": 379.782,
+    "end": 384.367,
+    "duration": 4.585000000000036,
+    "text": "I'm going to have to change what it was originally going to be because that looks like a beak now."
+  },
+  {
+    "evidence_id": 50,
+    "speaker": "SPEAKER_03",
+    "start": 391.194,
+    "end": 391.755,
+    "duration": 0.5609999999999786,
+    "text": "Crocodile?"
+  },
+  {
+    "evidence_id": 51,
+    "speaker": "SPEAKER_00",
+    "start": 394.208,
+    "end": 398.535,
+    "duration": 4.326999999999998,
+    "text": "Yeah, it can be a crocodile. It can be a crocodile."
+  },
+  {
+    "evidence_id": 52,
+    "speaker": "SPEAKER_00",
+    "start": 399.818,
+    "end": 406.228,
+    "duration": 6.410000000000025,
+    "text": "Firstly, it was an attempt at a T-Rex, and then it sort of changed into a pelican, but it can be a crocodile."
+  },
+  {
+    "evidence_id": 53,
+    "speaker": "SPEAKER_02",
+    "start": 420.16,
+    "end": 421.581,
+    "duration": 1.4209999999999923,
+    "text": "That's lovely."
+  },
+  {
+    "evidence_id": 54,
+    "speaker": "SPEAKER_00",
+    "start": 421.701,
+    "end": 425.164,
+    "duration": 3.4629999999999654,
+    "text": "And I have to think on the spot of things that it is."
+  },
+  {
+    "evidence_id": 55,
+    "speaker": "SPEAKER_00",
+    "start": 426.305,
+    "end": 429.587,
+    "duration": 3.2819999999999823,
+    "text": "Scary, strong,"
+  },
+  {
+    "evidence_id": 56,
+    "speaker": "SPEAKER_00",
+    "start": 438.793,
+    "end": 442.076,
+    "duration": 3.2830000000000155,
+    "text": "Yeah, that's about it, I think."
+  },
+  {
+    "evidence_id": 57,
+    "speaker": "SPEAKER_03",
+    "start": 443.438,
+    "end": 446.541,
+    "duration": 3.1030000000000086,
+    "text": "I'm very impressed with your artistic skills. Minds are dreadful."
+  },
+  {
+    "evidence_id": 58,
+    "speaker": "SPEAKER_03",
+    "start": 447.962,
+    "end": 450.665,
+    "duration": 2.7030000000000314,
+    "text": "Oops, this is now coming apart. Let me just put the top in."
+  },
+  {
+    "evidence_id": 59,
+    "speaker": "SPEAKER_00",
+    "start": 451.005,
+    "end": 451.145,
+    "duration": 0.13999999999998636,
+    "text": "I"
+  },
+  {
+    "evidence_id": 60,
+    "speaker": "SPEAKER_03",
+    "start": 454.108,
+    "end": 460.574,
+    "duration": 6.466000000000008,
+    "text": "hope that clicks in. I'll hold it on. Oops, oh dear. What happened there?"
+  },
+  {
+    "evidence_id": 61,
+    "speaker": "SPEAKER_02",
+    "start": 461.155,
+    "end": 461.996,
+    "duration": 0.8410000000000082,
+    "text": "Technical help."
+  },
+  {
+    "evidence_id": 62,
+    "speaker": "SPEAKER_03",
+    "start": 465.453,
+    "end": 469.035,
+    "duration": 3.5820000000000505,
+    "text": "Hopefully that'll stay on. Two-handed version."
+  },
+  {
+    "evidence_id": 63,
+    "speaker": "SPEAKER_03",
+    "start": 474.479,
+    "end": 478.502,
+    "duration": 4.023000000000025,
+    "text": "Again, this is off the top of my head. I was going to do a big cat, too."
+  },
+  {
+    "evidence_id": 64,
+    "speaker": "SPEAKER_03",
+    "start": 481.584,
+    "end": 483.225,
+    "duration": 1.6410000000000196,
+    "text": "It doesn't look like what I want it to be."
+  },
+  {
+    "evidence_id": 65,
+    "speaker": "SPEAKER_03",
+    "start": 488.789,
+    "end": 494.633,
+    "duration": 5.843999999999994,
+    "text": "It's not a vampire bat, honestly. Somewhere, there's a body behind."
+  },
+  {
+    "evidence_id": 66,
+    "speaker": "SPEAKER_03",
+    "start": 497.829,
+    "end": 504.596,
+    "duration": 6.766999999999996,
+    "text": "That's my dreadful, that's the worst, yeah. It's meant to be an eagle. You can tell it's a flying animal."
+  },
+  {
+    "evidence_id": 67,
+    "speaker": "SPEAKER_03",
+    "start": 505.697,
+    "end": 514.005,
+    "duration": 8.307999999999993,
+    "text": "Could have been a seagull, I never thought of a seagull. Again, I'm thinking on my feet, goodness. I suppose they're also independent, I put that one down again."
+  },
+  {
+    "evidence_id": 68,
+    "speaker": "SPEAKER_03",
+    "start": 518.271,
+    "end": 519.993,
+    "duration": 1.7220000000000937,
+    "text": "They're"
+  },
+  {
+    "evidence_id": 69,
+    "speaker": "SPEAKER_00",
+    "start": 520.013,
+    "end": 520.213,
+    "duration": 0.1999999999999318,
+    "text": "good at"
+  },
+  {
+    "evidence_id": 70,
+    "speaker": "SPEAKER_03",
+    "start": 520.253,
+    "end": 530.764,
+    "duration": 10.510999999999967,
+    "text": "golf. Independent, right? Did you say they're good at golf? Yeah. Are they? Eagle. Oh, right, okay. I'm not good at golf. I'll say they're quite free spirited,"
+  },
+  {
+    "evidence_id": 71,
+    "speaker": "SPEAKER_03",
+    "start": 532.065,
+    "end": 533.287,
+    "duration": 1.22199999999998,
+    "text": "flying around everywhere,"
+  },
+  {
+    "evidence_id": 72,
+    "speaker": "SPEAKER_03",
+    "start": 535.629,
+    "end": 536.59,
+    "duration": 0.9610000000000127,
+    "text": "doing their own thing."
+  },
+  {
+    "evidence_id": 73,
+    "speaker": "SPEAKER_03",
+    "start": 541.652,
+    "end": 542.473,
+    "duration": 0.8209999999999127,
+    "text": "And"
+  },
+  {
+    "evidence_id": 74,
+    "speaker": "SPEAKER_03",
+    "start": 543.774,
+    "end": 546.797,
+    "duration": 3.0230000000000246,
+    "text": "birds of prey, aren't they? Oh dear. Intrepid."
+  },
+  {
+    "evidence_id": 75,
+    "speaker": "SPEAKER_03",
+    "start": 547.998,
+    "end": 548.659,
+    "duration": 0.6609999999999445,
+    "text": "Intrepid."
+  },
+  {
+    "evidence_id": 76,
+    "speaker": "SPEAKER_03",
+    "start": 553.664,
+    "end": 556.306,
+    "duration": 2.6420000000000528,
+    "text": "There we go. I hope that pen is going to be OK."
+  },
+  {
+    "evidence_id": 77,
+    "speaker": "SPEAKER_03",
+    "start": 558.588,
+    "end": 561.191,
+    "duration": 2.6030000000000655,
+    "text": "Whoops."
+  },
+  {
+    "evidence_id": 78,
+    "speaker": "SPEAKER_02",
+    "start": 561.231,
+    "end": 561.551,
+    "duration": 0.32000000000005,
+    "text": "OK."
+  },
+  {
+    "evidence_id": 79,
+    "speaker": "SPEAKER_02",
+    "start": 563.145,
+    "end": 573.615,
+    "duration": 10.470000000000027,
+    "text": "That was fine. Right. Finance wise, we've got a selling price at 25 euros, which I don't actually know what that is in pounds at all."
+  },
+  {
+    "evidence_id": 80,
+    "speaker": "SPEAKER_02",
+    "start": 574.716,
+    "end": 574.876,
+    "duration": 0.15999999999996817,
+    "text": "Any"
+  },
+  {
+    "evidence_id": 81,
+    "speaker": "SPEAKER_01",
+    "start": 574.916,
+    "end": 580.981,
+    "duration": 6.064999999999941,
+    "text": "ideas? 17. Yeah. 1.4 euro would make a bond or something"
+  },
+  {
+    "evidence_id": 82,
+    "speaker": "SPEAKER_00",
+    "start": 581.242,
+    "end": 582.903,
+    "duration": 1.6610000000000582,
+    "text": "like that. Yeah,"
+  },
+  {
+    "evidence_id": 83,
+    "speaker": "SPEAKER_00",
+    "start": 584.024,
+    "end": 587.928,
+    "duration": 3.9039999999999964,
+    "text": "yeah, something like that. Yeah, about 17. 15, 17 pounds. OK. That's expensive."
+  },
+  {
+    "evidence_id": 84,
+    "speaker": "SPEAKER_03",
+    "start": 588.435,
+    "end": 592.239,
+    "duration": 3.8040000000000873,
+    "text": "Should we be making notes of this? We can just refer to this later, can't we? I think so. I think so."
+  },
+  {
+    "evidence_id": 85,
+    "speaker": "SPEAKER_02",
+    "start": 592.259,
+    "end": 595.282,
+    "duration": 3.0230000000000246,
+    "text": "I'd be able to pull it up or put it in the shared folder or something."
+  },
+  {
+    "evidence_id": 86,
+    "speaker": "SPEAKER_00",
+    "start": 595.302,
+    "end": 601.968,
+    "duration": 6.66599999999994,
+    "text": "Having said that though, if you want to get one of those, the ones on the market at the moment, they're about 20 pounds anyway."
+  },
+  {
+    "evidence_id": 87,
+    "speaker": "SPEAKER_00",
+    "start": 603.43,
+    "end": 606.313,
+    "duration": 2.883000000000038,
+    "text": "Right. Yeah, we have to buy one."
+  },
+  {
+    "evidence_id": 88,
+    "speaker": "SPEAKER_03",
+    "start": 608.134,
+    "end": 613.956,
+    "duration": 5.822000000000003,
+    "text": "So I suppose later it depends if we want to undercut the price, or is it going to make our product look a cheapy cheapy option?"
+  },
+  {
+    "evidence_id": 89,
+    "speaker": "SPEAKER_02",
+    "start": 613.976,
+    "end": 623.419,
+    "duration": 9.442999999999984,
+    "text": "Yeah, production costs at 12.50, so... Okay, pretty huge margin. Half of the selling price is taken out by building it."
+  },
+  {
+    "evidence_id": 90,
+    "speaker": "SPEAKER_02",
+    "start": 625.659,
+    "end": 629.381,
+    "duration": 3.72199999999998,
+    "text": "And profit aim is 50 million euros, which is..."
+  },
+  {
+    "evidence_id": 91,
+    "speaker": "SPEAKER_03",
+    "start": 630.461,
+    "end": 631.181,
+    "duration": 0.7200000000000273,
+    "text": "In our first year?"
+  },
+  {
+    "evidence_id": 92,
+    "speaker": "SPEAKER_02",
+    "start": 631.761,
+    "end": 633.602,
+    "duration": 1.8410000000000082,
+    "text": "Yes. Yeah,"
+  },
+  {
+    "evidence_id": 93,
+    "speaker": "SPEAKER_02",
+    "start": 634.622,
+    "end": 635.242,
+    "duration": 0.6200000000000045,
+    "text": "I presume so."
+  },
+  {
+    "evidence_id": 94,
+    "speaker": "SPEAKER_03",
+    "start": 638.101,
+    "end": 644.951,
+    "duration": 6.850000000000023,
+    "text": "You've got Market Range International, and you did say earlier it's got to be accessible and usable by all age groups."
+  },
+  {
+    "evidence_id": 95,
+    "speaker": "SPEAKER_03",
+    "start": 646.213,
+    "end": 650.76,
+    "duration": 4.5470000000000255,
+    "text": "We're not focusing on business market, any particular thing. It's everyone, user-friendly to everyone."
+  },
+  {
+    "evidence_id": 96,
+    "speaker": "SPEAKER_03",
+    "start": 653.423,
+    "end": 654.704,
+    "duration": 1.280999999999949,
+    "text": "Big target group."
+  },
+  {
+    "evidence_id": 97,
+    "speaker": "SPEAKER_02",
+    "start": 655.184,
+    "end": 661.428,
+    "duration": 6.244000000000028,
+    "text": "Yes. I don't think we have to I don't think it's a case of worrying about different languages and things like that"
+  },
+  {
+    "evidence_id": 98,
+    "speaker": "SPEAKER_02",
+    "start": 662.729,
+    "end": 668.693,
+    "duration": 5.963999999999942,
+    "text": "Making that key point just that it's going to be in the international market like Australia, America things like that"
+  },
+  {
+    "evidence_id": 99,
+    "speaker": "SPEAKER_02",
+    "start": 669.814,
+    "end": 670.154,
+    "duration": 0.34000000000003183,
+    "text": "Okay"
+  },
+  {
+    "evidence_id": 100,
+    "speaker": "SPEAKER_02",
+    "start": 675.257,
+    "end": 677.599,
+    "duration": 2.3420000000000982,
+    "text": "What are your experiences before new controls"
+  },
+  {
+    "evidence_id": 101,
+    "speaker": "SPEAKER_02",
+    "start": 679.269,
+    "end": 680.89,
+    "duration": 1.620999999999981,
+    "text": "I mean,"
+  },
+  {
+    "evidence_id": 102,
+    "speaker": "SPEAKER_02",
+    "start": 682.011,
+    "end": 704.502,
+    "duration": 22.490999999999985,
+    "text": "we had three videos, a TV and a sort of amp thing all set up. So we got one of the universal remote controls that you program each of your things into. But that kept losing the signals, so we'd have to reprogram it every now and again. I think it was quite cheapy as well. So that might have had something to do with it. But that was quite good, the fact that you could"
+  },
+  {
+    "evidence_id": 103,
+    "speaker": "SPEAKER_00",
+    "start": 705.387,
+    "end": 706.668,
+    "duration": 1.2810000000000628,
+    "text": "use all the ones. You didn't have"
+  },
+  {
+    "evidence_id": 104,
+    "speaker": "SPEAKER_02",
+    "start": 706.748,
+    "end": 707.068,
+    "duration": 0.31999999999993634,
+    "text": "six"
+  },
+  {
+    "evidence_id": 105,
+    "speaker": "SPEAKER_01",
+    "start": 707.248,
+    "end": 710.889,
+    "duration": 3.6409999999999627,
+    "text": "remote controls. You want to integrate everything into one."
+  },
+  {
+    "evidence_id": 106,
+    "speaker": "SPEAKER_01",
+    "start": 712.95,
+    "end": 713.11,
+    "duration": 0.15999999999996817,
+    "text": "My"
+  },
+  {
+    "evidence_id": 107,
+    "speaker": "SPEAKER_03",
+    "start": 713.15,
+    "end": 729.357,
+    "duration": 16.206999999999994,
+    "text": "experience has only been given the remote control with the object I buy, not doing any tampering with it and programming, using it to program TV videos and things, but basically on off volume, up and down, channel one to that basic function. I don't think I could go any further with it."
+  },
+  {
+    "evidence_id": 108,
+    "speaker": "SPEAKER_03",
+    "start": 730.497,
+    "end": 734.978,
+    "duration": 4.4809999999999945,
+    "text": "than that, so I suppose it's got to be something usable by someone like me as well."
+  },
+  {
+    "evidence_id": 109,
+    "speaker": "SPEAKER_02",
+    "start": 735.078,
+    "end": 752.723,
+    "duration": 17.644999999999982,
+    "text": "Yeah, that's the main stuff anyway. I mean, and you don't want to, I hate looking at a control and seeing a million tiny little buttons with tiny little words saying what they all do and just sitting there searching for the tele-text button or something like that. And symbols that you don't necessarily"
+  },
+  {
+    "evidence_id": 110,
+    "speaker": "SPEAKER_03",
+    "start": 752.843,
+    "end": 755.323,
+    "duration": 2.480000000000018,
+    "text": "understand, symbols you're meant to understand that you don't."
+  },
+  {
+    "evidence_id": 111,
+    "speaker": "SPEAKER_02",
+    "start": 759.125,
+    "end": 778.576,
+    "duration": 19.451000000000022,
+    "text": "when you've got the main things on the front of it and a section opens up or something to the other functions when you can do sound or options kind of recording things like that inside it because it doesn't make when you pick it up it doesn't make it really complicated to look at. It's obvious what you're doing."
+  },
+  {
+    "evidence_id": 112,
+    "speaker": "SPEAKER_03",
+    "start": 779.877,
+    "end": 794.494,
+    "duration": 14.617000000000075,
+    "text": "Actually, that just raises a point. I wonder what our design people think. But you know on a mobile phone, you can press a key and it gives you a menu. It's got a menu display. I wonder if incorporating that into the design of a remote control might be useful. So you've got a little LCD display."
+  },
+  {
+    "evidence_id": 113,
+    "speaker": "SPEAKER_01",
+    "start": 794.614,
+    "end": 812.063,
+    "duration": 17.448999999999955,
+    "text": "Right. I was thinking on the same lines you, instead of having too many buttons and make it complicated for the user. Maybe have an LCD display or something like that, like a mobile. With menus. And if it's somewhat similar to what you have on mobile phone, people might find it easier to browse and navigate also. Yeah."
+  },
+  {
+    "evidence_id": 114,
+    "speaker": "SPEAKER_02",
+    "start": 812.363,
+    "end": 814.924,
+    "duration": 2.560999999999922,
+    "text": "What about the older generation? What about granny and grandad?"
+  },
+  {
+    "evidence_id": 115,
+    "speaker": "SPEAKER_02",
+    "start": 816.444,
+    "end": 816.924,
+    "duration": 0.4800000000000182,
+    "text": "My"
+  },
+  {
+    "evidence_id": 116,
+    "speaker": "SPEAKER_02",
+    "start": 817.945,
+    "end": 823.206,
+    "duration": 5.260999999999967,
+    "text": "grandad can answer his mobile phone, but he couldn't even dream of texting or something like that."
+  },
+  {
+    "evidence_id": 117,
+    "speaker": "SPEAKER_03",
+    "start": 823.846,
+    "end": 826.887,
+    "duration": 3.04099999999994,
+    "text": "Can he program his remote controller? Is he basic with that too?"
+  },
+  {
+    "evidence_id": 118,
+    "speaker": "SPEAKER_02",
+    "start": 828.167,
+    "end": 829.148,
+    "duration": 0.9809999999999945,
+    "text": "I don't think they tape"
+  },
+  {
+    "evidence_id": 119,
+    "speaker": "SPEAKER_00",
+    "start": 829.188,
+    "end": 833.53,
+    "duration": 4.3419999999999845,
+    "text": "things. My granddad is actually better than me at using teletext."
+  },
+  {
+    "evidence_id": 120,
+    "speaker": "SPEAKER_03",
+    "start": 834.671,
+    "end": 844.657,
+    "duration": 9.98599999999999,
+    "text": "So that's a problem regardless of any design modifications you come up with. That's going to be a problem anyway with the older generation perhaps and that's another issue how we tackle that."
+  },
+  {
+    "evidence_id": 121,
+    "speaker": "SPEAKER_00",
+    "start": 844.697,
+    "end": 849.58,
+    "duration": 4.883000000000038,
+    "text": "Well it just needs to be as long as it's sort of self-intuitive and you can work out."
+  },
+  {
+    "evidence_id": 122,
+    "speaker": "SPEAKER_00",
+    "start": 851.013,
+    "end": 853.255,
+    "duration": 2.241999999999962,
+    "text": "why everything's doing. Because I mean, menus"
+  },
+  {
+    "evidence_id": 123,
+    "speaker": "SPEAKER_00",
+    "start": 854.536,
+    "end": 861.981,
+    "duration": 7.44500000000005,
+    "text": "on phones now, they've got all these pictures and stuff, which makes it fairly obvious what you're trying to do."
+  },
+  {
+    "evidence_id": 124,
+    "speaker": "SPEAKER_02",
+    "start": 864.331,
+    "end": 864.571,
+    "duration": 0.2400000000000091,
+    "text": "I don't"
+  },
+  {
+    "evidence_id": 125,
+    "speaker": "SPEAKER_00",
+    "start": 864.591,
+    "end": 865.472,
+    "duration": 0.8809999999999718,
+    "text": "know how."
+  },
+  {
+    "evidence_id": 126,
+    "speaker": "SPEAKER_02",
+    "start": 866.373,
+    "end": 869.855,
+    "duration": 3.481999999999971,
+    "text": "I don't like the new phones that kind of got a Windows based"
+  },
+  {
+    "evidence_id": 127,
+    "speaker": "SPEAKER_02",
+    "start": 870.895,
+    "end": 871.676,
+    "duration": 0.7810000000000628,
+    "text": "running system."
+  },
+  {
+    "evidence_id": 128,
+    "speaker": "SPEAKER_02",
+    "start": 872.977,
+    "end": 882.843,
+    "duration": 9.865999999999985,
+    "text": "I find it really confusing. I kept getting lost in the phone. I have not got a new one, but my friend got a new one. I was trying to do things with it and I just kept getting lost."
+  },
+  {
+    "evidence_id": 129,
+    "speaker": "SPEAKER_02",
+    "start": 884.404,
+    "end": 884.844,
+    "duration": 0.44000000000005457,
+    "text": "That's just"
+  },
+  {
+    "evidence_id": 130,
+    "speaker": "SPEAKER_00",
+    "start": 884.884,
+    "end": 898.929,
+    "duration": 14.044999999999959,
+    "text": "me. I don't know how for 25 or 12 euros 50 how much of an excellent screen you could get. You'd have to sort of keep it down to a black and white LCD thing. Is it"
+  },
+  {
+    "evidence_id": 131,
+    "speaker": "SPEAKER_03",
+    "start": 898.989,
+    "end": 911.593,
+    "duration": 12.603999999999928,
+    "text": "possible that for the older generation you could have like an extra button that you press for large print like you do in large print books? Obviously it displays less on the screen. It displays less on the screen but as long as they can read it that's the main thing."
+  },
+  {
+    "evidence_id": 132,
+    "speaker": "SPEAKER_02",
+    "start": 911.935,
+    "end": 912.255,
+    "duration": 0.32000000000005,
+    "text": "Yeah."
+  },
+  {
+    "evidence_id": 133,
+    "speaker": "SPEAKER_02",
+    "start": 914.236,
+    "end": 927.144,
+    "duration": 12.908000000000015,
+    "text": "What about kind of a dual function in that you've got the basic buttons just for your play, volume, program, things. And also, and then a menu to go into"
+  },
+  {
+    "evidence_id": 134,
+    "speaker": "SPEAKER_02",
+    "start": 928.204,
+    "end": 934.848,
+    "duration": 6.6440000000000055,
+    "text": "with obvious pictures, obvious symbols, and that's where you control recording and things like that."
+  },
+  {
+    "evidence_id": 135,
+    "speaker": "SPEAKER_03",
+    "start": 935.208,
+    "end": 946.993,
+    "duration": 11.785000000000082,
+    "text": "The other thing is, just tacking into mobile phone design features again, you could have a flip top remote control so that when you flip over the top, you can have a bigger screen in the flip over."
+  },
+  {
+    "evidence_id": 136,
+    "speaker": "SPEAKER_02",
+    "start": 948.5,
+    "end": 951.422,
+    "duration": 2.9220000000000255,
+    "text": "I think that's a cost thing. I don't know"
+  },
+  {
+    "evidence_id": 137,
+    "speaker": "SPEAKER_01",
+    "start": 951.482,
+    "end": 959.228,
+    "duration": 7.745999999999981,
+    "text": "how much we're going to know about. It might save a bit of space. Instead of looking bulky, it might look small. But it might have its cost implications."
+  },
+  {
+    "evidence_id": 138,
+    "speaker": "SPEAKER_03",
+    "start": 959.728,
+    "end": 973.281,
+    "duration": 13.552999999999997,
+    "text": "And there's no reason we need to make it look as fashionable and stylish as a mobile phone. It can still be lightweight plastic, something that's easily molded and produced. Sorry, I'm chatting on your territory, guys."
+  },
+  {
+    "evidence_id": 139,
+    "speaker": "SPEAKER_02",
+    "start": 973.741,
+    "end": 978.428,
+    "duration": 4.687000000000012,
+    "text": "Right, OK, we've got half an hour before the next meeting, so we're all going to go off and do our individual things."
+  },
+  {
+    "evidence_id": 140,
+    "speaker": "SPEAKER_02",
+    "start": 981.271,
+    "end": 989.5,
+    "duration": 8.229000000000042,
+    "text": "I think that's probably about it and then we'll come back in days again and I get to do another fantastic presentation."
+  },
+  {
+    "evidence_id": 141,
+    "speaker": "SPEAKER_00",
+    "start": 989.8,
+    "end": 991.862,
+    "duration": 2.062000000000012,
+    "text": "Just a quick thing about the,"
+  },
+  {
+    "evidence_id": 142,
+    "speaker": "SPEAKER_00",
+    "start": 993.244,
+    "end": 1001.193,
+    "duration": 7.948999999999955,
+    "text": "what you were saying about the, it doesn't need to be fashionable. So I had a quick look at the company website and it's like the"
+  },
+  {
+    "evidence_id": 143,
+    "speaker": "SPEAKER_00",
+    "start": 1002.794,
+    "end": 1014.185,
+    "duration": 11.390999999999963,
+    "text": "we put the fashion into electronics. So I think the whole design thing might be quite, I mean you can still have plastic and it looks quite good."
+  },
+  {
+    "evidence_id": 144,
+    "speaker": "SPEAKER_03",
+    "start": 1014.826,
+    "end": 1022.012,
+    "duration": 7.185999999999922,
+    "text": "Yeah, I mean it doesn't have to be, that was my main point, we do have to use metal, I don't know if using plastic does make it cheaper, I presume it would."
+  },
+  {
+    "evidence_id": 145,
+    "speaker": "SPEAKER_02",
+    "start": 1025.075,
+    "end": 1036.842,
+    "duration": 11.767000000000053,
+    "text": "I mean, the sky remote controls and everything. They're kind of molded and look a bit different than the tele-west remote controls. They're silver plastic, which looks a bit smarter. So yeah, I guess that's it."
+  },
+  {
+    "evidence_id": 146,
+    "speaker": "SPEAKER_03",
+    "start": 1036.882,
+    "end": 1037.803,
+    "duration": 0.9210000000000491,
+    "text": "Okay."
+  },
+  {
+    "evidence_id": 147,
+    "speaker": "SPEAKER_02",
+    "start": 1038.724,
+    "end": 1044.187,
+    "duration": 5.462999999999965,
+    "text": "Okay. So let's break it up there. Okay. Okay. So see you in half an hour."
+  },
+  {
+    "evidence_id": 148,
+    "speaker": "SPEAKER_03",
+    "start": 1046.428,
+    "end": 1048.43,
+    "duration": 2.0019999999999527,
+    "text": "Do we go back to our room? Yeah."
+  }
+]
