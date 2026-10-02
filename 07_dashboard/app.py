@@ -327,6 +327,345 @@ with mc4:
     )
 
 
+
+# ============================================================
+# LIVE MEETING PROCESSING ORCHESTRATION
+# ============================================================
+
+import sys
+import torch
+
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM
+)
+
+DASHBOARD_DIR = PROJECT_ROOT / "07_dashboard"
+
+if str(DASHBOARD_DIR) not in sys.path:
+    sys.path.insert(
+        0,
+        str(DASHBOARD_DIR)
+    )
+
+import meeting_pipeline as mp
+
+
+@st.cache_resource(show_spinner=False)
+def load_qwen_generator():
+    """
+    Load the final Qwen generator once per Streamlit runtime.
+    """
+
+    model_name = (
+        "Qwen/Qwen2.5-3B-Instruct"
+    )
+
+    tokenizer = (
+        AutoTokenizer.from_pretrained(
+            model_name
+        )
+    )
+
+    if torch.cuda.is_available():
+
+        model = (
+            AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16,
+                device_map="auto"
+            )
+        )
+
+    else:
+
+        model = (
+            AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.float32
+            )
+        )
+
+    model.eval()
+
+    return model, tokenizer
+
+
+def process_uploaded_meeting(
+    audio_path,
+    generator="qwen",
+    generator_model=None,
+    generator_tokenizer=None,
+    hf_token=None,
+    top_k=10,
+    temporal_tolerance_seconds=5.0,
+):
+    """
+    Run the validated generic meeting-processing pipeline.
+
+    Pipeline:
+        VAD
+        -> WhisperX
+        -> Pyannote
+        -> Speaker alignment
+        -> MoM candidate detection
+        -> Qwen claim generation
+        -> BGE/FAISS evidence retrieval
+        -> NLI/consistency verification
+    """
+
+    audio_path = Path(
+        audio_path
+    )
+
+    if not audio_path.exists():
+
+        raise FileNotFoundError(
+            f"Audio file not found: {audio_path}"
+        )
+
+    # --------------------------------------------------------
+    # 1. VAD
+    # --------------------------------------------------------
+
+    vad_result = (
+        mp.run_silero_vad(
+            audio_path
+        )
+    )
+
+    # --------------------------------------------------------
+    # 2. WhisperX ASR
+    # --------------------------------------------------------
+
+    whisper_result = (
+        mp.run_whisperx_pipeline(
+            audio_path
+        )
+    )
+
+    # --------------------------------------------------------
+    # 3. Pyannote diarization
+    # --------------------------------------------------------
+
+    diarization_result = (
+        mp.run_pyannote_diarization(
+            audio_path,
+            hf_token=hf_token
+        )
+    )
+
+    # --------------------------------------------------------
+    # 4. Speaker alignment
+    # --------------------------------------------------------
+
+    alignment_result = (
+        mp.run_speaker_word_alignment(
+            whisper_result,
+            diarization_result
+        )
+    )
+
+    utterances = (
+        alignment_result.get(
+            "utterances",
+            []
+        )
+    )
+
+    # --------------------------------------------------------
+    # 5. MoM candidate detection
+    # --------------------------------------------------------
+
+    candidate_result = (
+        mp.filter_mom_candidates_v3(
+            utterances,
+            return_all=True
+        )
+    )
+
+    candidates = (
+        candidate_result.get(
+            "candidates",
+            []
+        )
+    )
+
+    # --------------------------------------------------------
+    # 6. Qwen structured claim generation
+    # --------------------------------------------------------
+
+    generation_result = (
+        mp.generate_structured_mom(
+            candidates,
+            generator=generator,
+            model=generator_model,
+            tokenizer=generator_tokenizer
+        )
+    )
+
+    generated_claims = (
+        generation_result.get(
+            "claims",
+            []
+        )
+    )
+
+    # --------------------------------------------------------
+    # 7. Evidence retrieval resources
+    # --------------------------------------------------------
+
+    retrieval_resources = (
+        mp.build_evidence_retrieval_resources(
+            utterances
+        )
+    )
+
+    bge_model = (
+        retrieval_resources[
+            "bge_model"
+        ]
+    )
+
+    faiss_index = (
+        retrieval_resources[
+            "faiss_index"
+        ]
+    )
+
+    evidence_documents = (
+        retrieval_resources[
+            "evidence_documents"
+        ]
+    )
+
+    # --------------------------------------------------------
+    # 8. Evidence verification
+    # --------------------------------------------------------
+
+    verification_results = []
+
+    for claim in generated_claims:
+
+        verification_result = (
+            mp.verify_multi_attribute_claim(
+                claim=claim,
+                bge_model=bge_model,
+                faiss_index=faiss_index,
+                evidence_documents=(
+                    evidence_documents
+                ),
+                source_candidates=candidates,
+                top_k=top_k,
+                temporal_tolerance_seconds=(
+                    temporal_tolerance_seconds
+                )
+            )
+        )
+
+        verification_results.append(
+            mp.format_verified_claim_result(
+                verification_result
+            )
+        )
+
+    # --------------------------------------------------------
+    # 9. Verification summary
+    # --------------------------------------------------------
+
+    verified_count = sum(
+        1
+        for result in verification_results
+        if result.get(
+            "status"
+        ) == "VERIFIED"
+    )
+
+    flagged_count = sum(
+        1
+        for result in verification_results
+        if result.get(
+            "status"
+        ) == "FLAGGED"
+    )
+
+    total_claims = len(
+        verification_results
+    )
+
+    verification_rate = (
+        verified_count
+        / total_claims
+        * 100
+        if total_claims
+        else 0.0
+    )
+
+    # --------------------------------------------------------
+    # 10. Final result
+    # --------------------------------------------------------
+
+    return {
+
+        "status": "completed",
+
+        "meeting_id": (
+            audio_path.stem
+        ),
+
+        "generator": {
+
+            "name": "Qwen",
+
+            "model": (
+                "Qwen/Qwen2.5-3B-Instruct"
+            ),
+
+            "strategy": (
+                "candidate_level_claim_extraction"
+            )
+        },
+
+        "retrieval": {
+
+            "model": (
+                mp.BGE_MODEL_NAME
+            ),
+
+            "top_k": int(
+                top_k
+            ),
+
+            "evidence_count": len(
+                evidence_documents
+            )
+        },
+
+        "verification_summary": {
+
+            "total_claims": (
+                total_claims
+            ),
+
+            "verified_claims": (
+                verified_count
+            ),
+
+            "flagged_claims": (
+                flagged_count
+            ),
+
+            "verification_rate": (
+                verification_rate
+            )
+        },
+
+        "claims": (
+            verification_results
+        )
+    }
+
+
 # ============================================================
 # UPLOAD NEW MEETING
 # ============================================================
@@ -371,6 +710,10 @@ if uploaded_meeting is not None:
 
         try:
 
+            # ------------------------------------------------
+            # Save uploaded meeting
+            # ------------------------------------------------
+
             saved_path = save_uploaded_meeting(
                 uploaded_meeting
             )
@@ -389,16 +732,328 @@ if uploaded_meeting is not None:
                 f"{saved_path.stat().st_size / (1024 * 1024):.2f} MB"
             )
 
+
+            # ------------------------------------------------
+            # Run validated meeting pipeline
+            # ------------------------------------------------
+
             st.info(
-                "Upload saved successfully. "
-                "AI processing will be connected next."
+                "Starting AI meeting processing..."
             )
+
+
+
+            # ------------------------------------------------
+            # Load cached Qwen generator
+            # ------------------------------------------------
+
+            st.info(
+                "Loading Qwen generator..."
+            )
+
+            qwen_model, qwen_tokenizer = (
+                load_qwen_generator()
+            )
+
+            st.info(
+                "Running VAD → WhisperX → "
+                "Pyannote → MoM → Evidence → "
+                "Verification..."
+            )
+
+            pipeline_result = (
+                process_uploaded_meeting(
+                    audio_path=saved_path,
+                    generator="qwen",
+                    generator_model=qwen_model,
+                    generator_tokenizer=qwen_tokenizer,
+                    top_k=10,
+                    temporal_tolerance_seconds=5.0
+                )
+            )
+
+
+            # ------------------------------------------------
+            # Save result
+            # ------------------------------------------------
+
+            live_dir = (
+                PROJECT_ROOT
+                / "outputs"
+                / "live"
+            )
+
+            live_dir.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+
+
+            result_path = (
+                live_dir
+                / (
+                    saved_path.stem
+                    + "_verified_mom.json"
+                )
+            )
+
+
+            with open(
+                result_path,
+                "w",
+                encoding="utf-8"
+            ) as f:
+
+                json.dump(
+                    pipeline_result,
+                    f,
+                    indent=2,
+                    ensure_ascii=False
+                )
+
+
+            # ------------------------------------------------
+            # Store result
+            # ------------------------------------------------
+
+            st.session_state[
+                "uploaded_meeting_result"
+            ] = pipeline_result
+
+            st.session_state[
+                "uploaded_meeting_result_path"
+            ] = str(result_path)
+
+
+            # ------------------------------------------------
+            # Display verification summary
+            # ------------------------------------------------
+
+            summary = (
+                pipeline_result.get(
+                    "verification_summary",
+                    {}
+                )
+            )
+
+
+            st.success(
+                "✓ Meeting processing completed."
+            )
+
+
+            st.subheader(
+                "📊 Verification Summary"
+            )
+
+
+            c1, c2, c3, c4 = st.columns(4)
+
+
+            with c1:
+
+                st.metric(
+                    "Total Claims",
+                    summary.get(
+                        "total_claims",
+                        0
+                    )
+                )
+
+
+            with c2:
+
+                st.metric(
+                    "Verified",
+                    summary.get(
+                        "verified_claims",
+                        0
+                    )
+                )
+
+
+            with c3:
+
+                st.metric(
+                    "Flagged",
+                    summary.get(
+                        "flagged_claims",
+                        0
+                    )
+                )
+
+
+            with c4:
+
+                st.metric(
+                    "Verification Rate",
+                    f"{summary.get('verification_rate', 0.0):.2f}%"
+                )
+
+
+            # ------------------------------------------------
+            # Display generated claims
+            # ------------------------------------------------
+
+            live_claims = (
+                pipeline_result.get(
+                    "claims",
+                    []
+                )
+            )
+
+
+            if live_claims:
+
+                st.subheader(
+                    "📝 Verified Meeting Minutes"
+                )
+
+
+                for idx, claim in enumerate(
+                    live_claims,
+                    start=1
+                ):
+
+                    status = claim.get(
+                        "status",
+                        "UNKNOWN"
+                    )
+
+                    claim_text = claim.get(
+                        "claim",
+                        ""
+                    )
+
+                    speaker = claim.get(
+                        "speaker",
+                        "Unknown"
+                    )
+
+                    event_type = claim.get(
+                        "event_type",
+                        "Unknown"
+                    )
+
+
+                    with st.expander(
+                        f"Claim {idx} — {status}"
+                    ):
+
+                        st.markdown(
+                            f"### {claim_text}"
+                        )
+
+                        st.write(
+                            f"**Speaker:** {speaker}"
+                        )
+
+                        st.write(
+                            f"**Event Type:** {event_type}"
+                        )
+
+
+                        verification = claim.get(
+                            "verification",
+                            {}
+                        )
+
+
+                        st.write(
+                            f"**Content:** "
+                            f"{verification.get('content', 'N/A')}"
+                        )
+
+                        st.write(
+                            f"**Speaker:** "
+                            f"{verification.get('speaker', 'N/A')}"
+                        )
+
+                        st.write(
+                            f"**Event Type:** "
+                            f"{verification.get('event_type', 'N/A')}"
+                        )
+
+                        st.write(
+                            f"**Temporal:** "
+                            f"{verification.get('temporal', 'N/A')}"
+                        )
+
+
+                        evidence = claim.get(
+                            "evidence",
+                            {}
+                        )
+
+
+                        if evidence:
+
+                            st.markdown(
+                                "#### 🔎 Supporting Evidence"
+                            )
+
+                            st.write(
+                                f"**Evidence ID:** "
+                                f"{evidence.get('evidence_id', 'N/A')}"
+                            )
+
+                            st.write(
+                                f"**Evidence Speaker:** "
+                                f"{evidence.get('speaker', 'N/A')}"
+                            )
+
+                            st.write(
+                                f"**Evidence Time:** "
+                                f"{format_timestamp(evidence.get('start'))}"
+                                f" – "
+                                f"{format_timestamp(evidence.get('end'))}"
+                            )
+
+                            st.write(
+                                f"**Retrieval Similarity:** "
+                                f"{evidence.get('retrieval_similarity', 'N/A')}"
+                            )
+
+                            st.write(
+                                f"**NLI:** "
+                                f"{evidence.get('nli_label', 'N/A')}"
+                            )
+
+                            st.write(
+                                evidence.get(
+                                    "text",
+                                    ""
+                                )
+                            )
+
+
+            # ------------------------------------------------
+            # Download JSON
+            # ------------------------------------------------
+
+            st.download_button(
+                "⬇️ Download Verified MoM JSON",
+                data=json.dumps(
+                    pipeline_result,
+                    indent=2,
+                    ensure_ascii=False
+                ),
+                file_name=(
+                    saved_path.stem
+                    + "_verified_mom.json"
+                ),
+                mime="application/json",
+                use_container_width=True
+            )
+
 
         except Exception as e:
 
             st.error(
-                f"Upload failed: {e}"
+                f"Meeting processing failed: {e}"
             )
+
+            st.exception(e)
 
 
 

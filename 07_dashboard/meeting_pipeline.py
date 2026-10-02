@@ -12,9 +12,7 @@ import os
 # PROJECT PATHS
 # ============================================================
 
-PROJECT_DIR = Path(
-    "/content/drive/MyDrive/MTechIndProj/MoM_Project"
-)
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 DATA_DIR = PROJECT_DIR / "data"
 MODEL_DIR = PROJECT_DIR / "models"
@@ -715,6 +713,25 @@ MOM_ACTION_PATTERNS = [
 ]
 
 
+MOM_FORMAL_MEETING_PATTERNS = [
+    r"\bbe it resolved\b",
+    r"\bresolved that\b",
+    r"\bit is resolved\b",
+    r"\bapproved\b",
+    r"\bapproval\b",
+    r"\bunanimous\b",
+    r"\bso carried\b",
+    r"\bthose in support\b",
+    r"\bmover\b",
+    r"\bseconder\b",
+    r"\bdelegated to\b",
+    r"\bappointed\b",
+    r"\badopted\b",
+    r"\bshall be\b",
+    r"\bis hereby approved\b",
+]
+
+
 MOM_PROPOSAL_PATTERNS = [
     r"\bi suggest\b",
     r"\bi propose\b",
@@ -859,22 +876,20 @@ def classify_mom_candidate_v3(utterance):
         MOM_PROPOSAL_PATTERNS
     )
 
+    formal_meeting = _mom_matches_pattern(
+        text,
+        MOM_FORMAL_MEETING_PATTERNS
+    )
+
     if intro_present and not (
         decision
         or action
         or proposal
+        or formal_meeting
     ):
 
         result["candidate_reasons"] = [
             "meeting_introduction"
-        ]
-
-        return result
-
-    if project_count == 0:
-
-        result["candidate_reasons"] = [
-            "no_project_context"
         ]
 
         return result
@@ -888,6 +903,14 @@ def classify_mom_candidate_v3(utterance):
         candidate_type = "DECISION"
         score = 5
         reasons.append("decision_signal")
+
+    elif formal_meeting:
+
+        candidate_type = "DECISION"
+        score = 5
+        reasons.append(
+            "formal_meeting_decision_signal"
+        )
 
     elif action:
 
@@ -909,13 +932,21 @@ def classify_mom_candidate_v3(utterance):
             "substantive_project_content"
         )
 
-    else:
+    elif project_count == 1:
 
         candidate_type = "PROJECT_CONTEXT"
         score = 2
         reasons.append(
             "project_context"
         )
+
+    else:
+
+        result["candidate_reasons"] = [
+            "no_mom_signal"
+        ]
+
+        return result
 
     if len(text.split()) >= 25:
 
@@ -1165,19 +1196,19 @@ def generate_mom_qwen(
     tokenizer=None,
 ):
     """
-    Qwen structured MoM generation.
+    Candidate-level structured MoM generation.
 
-    Qwen generates claim text.
+    Each candidate is processed independently so that
+    long conversational context from one candidate does
+    not interfere with extraction from another.
+
+    Qwen generates only the claim text.
 
     Speaker, event_type, start, and end are inherited
-    from the source candidate to preserve provenance.
+    from the original candidate to preserve provenance.
     """
 
-    context = prepare_candidate_context(
-        candidates
-    )
-
-    if not context:
+    if not candidates:
         return {
             "generator": "qwen",
             "model_name": GENERATOR_CONFIG[
@@ -1185,7 +1216,7 @@ def generate_mom_qwen(
             ]["model_name"],
             "status": "empty_context",
             "claims": [],
-            "context": context,
+            "context": "",
         }
 
     if model is None or tokenizer is None:
@@ -1196,270 +1227,235 @@ def generate_mom_qwen(
             ]["model_name"],
             "status": "context_ready",
             "claims": [],
-            "context": context,
+            "context": prepare_candidate_context(
+                candidates
+            ),
         }
 
     import json
     import re
     import torch
 
-    prompt = f"""
-You are generating structured Minutes of Meeting claims.
+    generated_claims = []
+    raw_outputs = []
 
-Use ONLY the information contained in the meeting
-candidates below.
-
-For each meaningful meeting claim, return a JSON object
-with exactly:
-
-- claim
-- speaker
-- event_type
-- start
-- end
-
-Rules:
-1. Do not invent information.
-2. Keep claims concise and factual.
-3. Exclude irrelevant conversation.
-4. Return ONLY a JSON array.
-5. Do not use Markdown fences.
-6. Do not include explanations outside the JSON array.
-
-Meeting candidates:
-
-{context}
-"""
-
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a precise meeting-minutes "
-                "extraction assistant. "
-                "Output valid JSON only."
-            ),
-        },
-        {
-            "role": "user",
-            "content": prompt,
-        },
-    ]
-
-    formatted_prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-    )
-
-    inputs = tokenizer(
-        formatted_prompt,
-        return_tensors="pt",
-        truncation=True,
-        max_length=8192,
-    )
-
-    device = next(
-        model.parameters()
-    ).device
-
-    inputs = {
-        key: value.to(device)
-        for key, value in inputs.items()
-    }
-
-    with torch.no_grad():
-
-        output_ids = model.generate(
-            **inputs,
-            max_new_tokens=1200,
-            do_sample=False,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-
-    input_length = inputs[
-        "input_ids"
-    ].shape[1]
-
-    generated_ids = output_ids[
-        0,
-        input_length:
-    ]
-
-    raw_output = tokenizer.decode(
-        generated_ids,
-        skip_special_tokens=True,
-    ).strip()
-
-    clean_output = re.sub(
-        r"^```(?:json)?\s*|\s*```$",
-        "",
-        raw_output,
-        flags=re.IGNORECASE | re.DOTALL,
-    ).strip()
-
-    try:
-        generated_claims = json.loads(
-            clean_output
-        )
-    except json.JSONDecodeError as exc:
-
-        return {
-            "generator": "qwen",
-            "model_name": GENERATOR_CONFIG[
-                "qwen"
-            ]["model_name"],
-            "status": "json_parse_error",
-            "claims": [],
-            "raw_output": raw_output,
-            "error": str(exc),
-            "context": context,
-        }
-
-    if not isinstance(
-        generated_claims,
-        list
+    for idx, candidate in enumerate(
+        candidates,
+        start=1
     ):
 
-        return {
-            "generator": "qwen",
-            "model_name": GENERATOR_CONFIG[
-                "qwen"
-            ]["model_name"],
-            "status": "invalid_json_structure",
-            "claims": [],
-            "raw_output": raw_output,
-            "context": context,
+        candidate_text = str(
+            candidate.get("text", "")
+        ).strip()
+
+        if not candidate_text:
+            continue
+
+        candidate_type = (
+            candidate.get(
+                "candidate_type"
+            )
+            or "DISCUSSION_POINT"
+        )
+
+        candidate_speaker = (
+            candidate.get("speaker")
+            or "UNKNOWN"
+        )
+
+        candidate_start = candidate.get(
+            "start"
+        )
+
+        candidate_end = candidate.get(
+            "end"
+        )
+
+        # ----------------------------------------------------
+        # Candidate-specific extraction prompt
+        # ----------------------------------------------------
+
+        prompt = f"""
+Extract the single most important meeting-minutes
+claim from the meeting utterance below.
+
+SOURCE UTTERANCE:
+{candidate_text}
+
+SOURCE TYPE:
+{candidate_type}
+
+Rules:
+1. Use ONLY information explicitly stated in the source.
+2. Do NOT add information.
+3. Do NOT copy the entire utterance.
+4. Remove greetings, acknowledgements, filler,
+   procedural language, agenda transitions, and
+   unrelated conversation.
+5. Preserve important factual details such as names,
+   dates, amounts, locations, responsibilities,
+   decisions, and proposals.
+6. Produce ONE concise claim.
+7. If the source contains a proposal that was not
+   explicitly accepted, describe it as a proposal.
+8. Do not convert a proposal into a decision.
+9. Do not invent an outcome.
+10. Do not include commentary or explanation.
+
+Return ONLY valid JSON in exactly this format:
+
+{{
+  "claim": "concise factual meeting claim"
+}}
+"""
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a precise meeting-minutes "
+                    "claim extraction system. "
+                    "Extract facts from the supplied "
+                    "utterance and return JSON only."
+                ),
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ]
+
+        formatted_prompt = (
+            tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        )
+
+        inputs = tokenizer(
+            formatted_prompt,
+            return_tensors="pt",
+            truncation=True,
+            max_length=4096,
+        )
+
+        device = next(
+            model.parameters()
+        ).device
+
+        inputs = {
+            key: value.to(device)
+            for key, value in inputs.items()
         }
 
-    # --------------------------------------------------------
-    # Ground generated claims to source candidates
-    # --------------------------------------------------------
+        with torch.no_grad():
 
-    grounded_claims = []
+            output_ids = model.generate(
+                **inputs,
+                max_new_tokens=160,
+                do_sample=False,
+                pad_token_id=(
+                    tokenizer.eos_token_id
+                ),
+            )
 
-    for generated in generated_claims:
+        input_length = inputs[
+            "input_ids"
+        ].shape[1]
+
+        generated_ids = output_ids[
+            0,
+            input_length:
+        ]
+
+        raw_output = tokenizer.decode(
+            generated_ids,
+            skip_special_tokens=True,
+        ).strip()
+
+        raw_outputs.append({
+            "candidate_index": idx,
+            "raw_output": raw_output,
+        })
+
+        clean_output = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            raw_output,
+            flags=re.IGNORECASE | re.DOTALL,
+        ).strip()
+
+        # ----------------------------------------------------
+        # Parse JSON
+        # ----------------------------------------------------
+
+        try:
+            parsed = json.loads(
+                clean_output
+            )
+
+        except json.JSONDecodeError:
+            continue
 
         if not isinstance(
-            generated,
+            parsed,
             dict
         ):
             continue
 
-        if not generated.get("claim"):
+        claim_text = str(
+            parsed.get(
+                "claim",
+                ""
+            )
+        ).strip()
+
+        if not claim_text:
             continue
 
-        try:
-            generated_start = float(
-                generated["start"]
-            )
-            generated_end = float(
-                generated["end"]
-            )
-        except (
-            KeyError,
-            TypeError,
-            ValueError,
-        ):
-            continue
+        # ----------------------------------------------------
+        # Preserve source provenance
+        # ----------------------------------------------------
 
-        best_candidate = None
-        best_overlap = 0.0
-
-        for candidate in candidates:
-
-            candidate_start = float(
-                candidate["start"]
-            )
-
-            candidate_end = float(
-                candidate["end"]
-            )
-
-            overlap_start = max(
-                generated_start,
-                candidate_start,
-            )
-
-            overlap_end = min(
-                generated_end,
-                candidate_end,
-            )
-
-            overlap = max(
-                0.0,
-                overlap_end - overlap_start,
-            )
-
-            duration = max(
-                candidate_end - candidate_start,
-                1e-9,
-            )
-
-            overlap_ratio = (
-                overlap / duration
-            )
-
-            if overlap_ratio > best_overlap:
-
-                best_overlap = overlap_ratio
-                best_candidate = candidate
-
-        if best_candidate is None:
-            continue
-
-        grounded_claims.append(
-            {
-                "claim": str(
-                    generated["claim"]
-                ).strip(),
-
-                "speaker": best_candidate[
-                    "speaker"
-                ],
-
-                "event_type": best_candidate[
-                    "candidate_type"
-                ],
-
-                "start": float(
-                    best_candidate["start"]
+        generated_claims.append({
+            "claim": claim_text,
+            "speaker": candidate_speaker,
+            "event_type": candidate_type,
+            "start": candidate_start,
+            "end": candidate_end,
+            "source_candidate": {
+                "speaker": candidate_speaker,
+                "start": candidate_start,
+                "end": candidate_end,
+                "candidate_type": candidate_type,
+                "candidate_score": candidate.get(
+                    "candidate_score"
                 ),
-
-                "end": float(
-                    best_candidate["end"]
+                "candidate_reasons": candidate.get(
+                    "candidate_reasons",
+                    []
                 ),
-
-                "source_candidate": {
-                    "speaker": best_candidate[
-                        "speaker"
-                    ],
-                    "start": float(
-                        best_candidate["start"]
-                    ),
-                    "end": float(
-                        best_candidate["end"]
-                    ),
-                    "event_type": best_candidate[
-                        "candidate_type"
-                    ],
-                },
-
-                "source_overlap": float(
-                    best_overlap
-                ),
-            }
-        )
+                "text": candidate_text,
+            },
+            "source_overlap": 1.0,
+        })
 
     return {
         "generator": "qwen",
         "model_name": GENERATOR_CONFIG[
             "qwen"
         ]["model_name"],
-        "status": "generated",
-        "claims": grounded_claims,
-        "raw_output": raw_output,
-        "context": context,
+        "status": (
+            "generated"
+            if generated_claims
+            else "no_claims_generated"
+        ),
+        "claims": generated_claims,
+        "raw_outputs": raw_outputs,
+        "context": prepare_candidate_context(
+            candidates
+        ),
     }
 
 def generate_structured_mom(
