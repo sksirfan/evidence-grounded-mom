@@ -7,6 +7,11 @@ from pathlib import Path
 import json
 import os
 
+import subprocess
+import tempfile
+import soundfile as sf
+import numpy as np
+
 
 # ============================================================
 # PROJECT PATHS
@@ -133,8 +138,6 @@ def load_silero_vad():
     )
 
     return model, utils
-
-
 def run_silero_vad(
     audio_path,
     output_path=None,
@@ -158,17 +161,70 @@ def run_silero_vad(
         collect_chunks
     ) = utils
 
-    wav = read_audio(
-        str(audio_path),
-        sampling_rate=16000
+    # ---------------------------------------------------------
+    # Windows-compatible audio loading
+    # Bypass torchaudio.load() by using FFmpeg + SoundFile.
+    # ---------------------------------------------------------
+    with tempfile.NamedTemporaryFile(
+        suffix=".wav",
+        delete=False
+    ) as tmp:
+
+        temp_wav_path = tmp.name
+
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(audio_path),
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-c:a",
+                "pcm_s16le",
+                temp_wav_path,
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        audio_data, sample_rate = sf.read(
+            temp_wav_path,
+            dtype="float32"
+        )
+
+    finally:
+        Path(temp_wav_path).unlink(
+            missing_ok=True
+        )
+
+    wav = torch.from_numpy(
+        np.asarray(audio_data, dtype=np.float32)
     )
 
+    if wav.ndim > 1:
+        wav = wav.mean(dim=1)
+
+    if sample_rate != 16000:
+        raise RuntimeError(
+            f"Unexpected audio sample rate: {sample_rate}"
+        )
+
+    # ---------------------------------------------------------
+    # Original Silero VAD processing
+    # ---------------------------------------------------------
     speech_timestamps = get_speech_timestamps(
         wav,
         model,
         threshold=threshold,
         sampling_rate=16000
     )
+
+
 
     segments = []
 
