@@ -649,6 +649,12 @@ def extract_evidence_audio_clip(audio_path_str, start_seconds, end_seconds):
             pass
 
 
+def set_active_evidence_player(key, is_active):
+    st.session_state["active_evidence_player"] = (
+        None if is_active else key
+    )
+
+
 def render_audio_evidence_player(
     audio_path,
     start,
@@ -705,7 +711,7 @@ def render_audio_evidence_player(
         )
 
     with c4:
-        clicked = st.button(
+        st.button(
             "⏸" if is_active else "▶",
             key=f"evidence_play_{key}",
             help=(
@@ -713,13 +719,10 @@ def render_audio_evidence_player(
                 if is_active
                 else "Play this exact evidence segment"
             ),
+            on_click=set_active_evidence_player,
+            args=(key, is_active),
         )
 
-    if clicked:
-        st.session_state["active_evidence_player"] = (
-            None if is_active else key
-        )
-        st.rerun()
 
     with c5:
         if is_active:
@@ -791,11 +794,7 @@ def render_processed_meeting(
             "📂 Processed Meeting"
         )
 
-        st.success(
-            "✓ Loaded from saved result — "
-            "AI pipeline was NOT rerun."
-        )
-
+       
     st.caption(
         f"Result file: {Path(result_path).name}"
     )
@@ -893,11 +892,7 @@ def render_processed_meeting(
 
     if audio_path is not None:
 
-        st.success(
-            f"Original recording found: "
-            f"{audio_path.name}"
-        )
-
+       
         st.audio(
             str(audio_path)
         )
