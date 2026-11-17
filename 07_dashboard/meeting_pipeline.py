@@ -768,6 +768,20 @@ MOM_ACTION_PATTERNS = [
     r"\bdue\b",
 ]
 
+# Explicit prerequisite/dependency language is meeting-relevant even
+# when it does not contain a conventional "we need to" action phrase.
+MOM_DEPENDENCY_PATTERNS = [
+    r"\b(?:must|has to|have to|needs to) happen before\b",
+    r"\bbefore .*\b(?:can|may|will)\b",
+    r"\bcannot .*\buntil\b",
+    r"\bcan't .*\buntil\b",
+    r"\bprerequisite for\b",
+    r"\bdepends on\b",
+    r"\bdependency between\b",
+    r"\b(blocked|blocking) by\b",
+    r"\bafter .* is (?:completed|finished|finali[sz]ed)\b",
+]
+
 
 MOM_FORMAL_MEETING_PATTERNS = [
     r"\bbe it resolved\b",
@@ -835,12 +849,23 @@ MOM_PROJECT_TERMS = [
 
 
 def _mom_has_term(text, terms):
-    text_lower = str(text).lower()
+    text_value = str(text).lower()
 
-    return any(
-        term.lower() in text_lower
-        for term in terms
-    )
+    for term in terms:
+        term_value = str(term).lower().strip()
+        if not term_value:
+            continue
+
+        # Match single words as whole tokens. Substring matching made
+        # "pen" match "happen" and incorrectly rejected valid project
+        # utterances as non-meeting activities.
+        if re.fullmatch(r"[a-z0-9_]+", term_value):
+            if re.search(rf"\b{re.escape(term_value)}\b", text_value):
+                return True
+        elif term_value in text_value:
+            return True
+
+    return False
 
 
 def _mom_matches_pattern(text, patterns):
@@ -927,6 +952,11 @@ def classify_mom_candidate_v3(utterance):
         MOM_ACTION_PATTERNS
     )
 
+    dependency_signal = _mom_matches_pattern(
+        text,
+        MOM_DEPENDENCY_PATTERNS
+    )
+
     proposal = _mom_matches_pattern(
         text,
         MOM_PROPOSAL_PATTERNS
@@ -940,6 +970,7 @@ def classify_mom_candidate_v3(utterance):
     if intro_present and not (
         decision
         or action
+        or dependency_signal
         or proposal
         or formal_meeting
     ):
@@ -967,6 +998,12 @@ def classify_mom_candidate_v3(utterance):
         reasons.append(
             "formal_meeting_decision_signal"
         )
+
+    elif dependency_signal:
+
+        candidate_type = "ACTION"
+        score = 5
+        reasons.append("explicit_dependency_signal")
 
     elif action:
 
@@ -1332,8 +1369,8 @@ def generate_mom_qwen(
         # ----------------------------------------------------
 
         prompt = f"""
-Extract the single most important meeting-minutes
-claim from the meeting utterance below.
+Extract ALL distinct, explicitly stated meeting-minutes claims from the
+single speaker utterance below. Do not stop after the first claim.
 
 SOURCE UTTERANCE:
 {candidate_text}
@@ -1342,26 +1379,25 @@ SOURCE TYPE:
 {candidate_type}
 
 Rules:
-1. Use ONLY information explicitly stated in the source.
-2. Do NOT add information.
-3. Do NOT copy the entire utterance.
-4. Remove greetings, acknowledgements, filler,
-   procedural language, agenda transitions, and
-   unrelated conversation.
-5. Preserve important factual details such as names,
-   dates, amounts, locations, responsibilities,
-   decisions, and proposals.
-6. Produce ONE concise claim.
-7. If the source contains a proposal that was not
-   explicitly accepted, describe it as a proposal.
-8. Do not convert a proposal into a decision.
-9. Do not invent an outcome.
-10. Do not include commentary or explanation.
+1. Use ONLY information explicitly stated in the source utterance.
+2. Extract multiple claims when the utterance contains multiple distinct
+   actions, decisions, commitments, or prerequisite relationships.
+3. Keep each claim atomic: one action or one dependency relationship per item.
+4. Preserve prerequisite direction exactly. For example, "A must happen
+   before B" means A is a prerequisite for B.
+5. Do not infer dependencies from order of speaking, common sense, or topic.
+6. Remove greetings, acknowledgements, filler and unrelated conversation.
+7. Preserve whether a statement is a proposal, decision, or action.
+8. Do not invent owners, deadlines, approvals, or outcomes.
+9. Avoid duplicate or paraphrased copies of the same claim.
+10. Return an empty list only if no meeting-relevant claim is explicit.
 
 Return ONLY valid JSON in exactly this format:
-
 {{
-  "claim": "concise factual meeting claim"
+  "claims": [
+    "first concise atomic claim",
+    "second concise atomic claim"
+  ]
 }}
 """
 
@@ -1409,7 +1445,7 @@ Return ONLY valid JSON in exactly this format:
 
             output_ids = model.generate(
                 **inputs,
-                max_new_tokens=160,
+                max_new_tokens=256,
                 do_sample=False,
                 pad_token_id=(
                     tokenizer.eos_token_id
@@ -1443,59 +1479,68 @@ Return ONLY valid JSON in exactly this format:
         ).strip()
 
         # ----------------------------------------------------
-        # Parse JSON
+        # Parse JSON (support legacy single-claim output too)
         # ----------------------------------------------------
 
         try:
-            parsed = json.loads(
-                clean_output
-            )
-
+            parsed = json.loads(clean_output)
         except json.JSONDecodeError:
+            # Recover the outermost JSON object if the model adds
+            # harmless leading/trailing text.
+            match = re.search(r"\{.*\}", clean_output, flags=re.DOTALL)
+            if not match:
+                continue
+            try:
+                parsed = json.loads(match.group(0))
+            except json.JSONDecodeError:
+                continue
+
+        if isinstance(parsed, dict):
+            claim_items = parsed.get("claims")
+            if claim_items is None:
+                legacy_claim = parsed.get("claim")
+                claim_items = [legacy_claim] if legacy_claim else []
+        elif isinstance(parsed, list):
+            claim_items = parsed
+        else:
             continue
 
-        if not isinstance(
-            parsed,
-            dict
-        ):
+        if not isinstance(claim_items, list):
             continue
 
-        claim_text = str(
-            parsed.get(
-                "claim",
-                ""
-            )
-        ).strip()
+        seen_claims = set()
+        for claim_item in claim_items:
+            if isinstance(claim_item, dict):
+                claim_text = str(
+                    claim_item.get("claim", claim_item.get("text", ""))
+                ).strip()
+            else:
+                claim_text = str(claim_item).strip()
 
-        if not claim_text:
-            continue
+            normalized = re.sub(r"\s+", " ", claim_text).casefold()
+            if not claim_text or normalized in seen_claims:
+                continue
+            seen_claims.add(normalized)
 
-        # ----------------------------------------------------
-        # Preserve source provenance
-        # ----------------------------------------------------
-
-        generated_claims.append({
-            "claim": claim_text,
-            "speaker": candidate_speaker,
-            "event_type": candidate_type,
-            "start": candidate_start,
-            "end": candidate_end,
-            "source_candidate": {
+            # Every extracted proposition retains the timestamp and speaker
+            # of the exact source utterance; no timestamp is generated by Qwen.
+            generated_claims.append({
+                "claim": claim_text,
                 "speaker": candidate_speaker,
+                "event_type": candidate_type,
                 "start": candidate_start,
                 "end": candidate_end,
-                "candidate_type": candidate_type,
-                "candidate_score": candidate.get(
-                    "candidate_score"
-                ),
-                "candidate_reasons": candidate.get(
-                    "candidate_reasons",
-                    []
-                ),
-                "text": candidate_text,
-            },
-            "source_overlap": 1.0,
-        })
+                "source_candidate": {
+                    "speaker": candidate_speaker,
+                    "start": candidate_start,
+                    "end": candidate_end,
+                    "candidate_type": candidate_type,
+                    "candidate_score": candidate.get("candidate_score"),
+                    "candidate_reasons": candidate.get("candidate_reasons", []),
+                    "text": candidate_text,
+                },
+                "source_overlap": 1.0,
+            })
 
     return {
         "generator": "qwen",
@@ -2207,25 +2252,33 @@ def run_nli(
         .tolist()
     )
 
-    label_map = {
-        0: "contradiction",
-        1: "entailment",
-        2: "neutral",
-    }
+    # Resolve class indices from the loaded checkpoint metadata. Different
+    # MNLI checkpoints use different index orders; never assume a fixed order.
+    config = getattr(nli_model, "config", None)
+    raw_id2label = getattr(config, "id2label", None) or {}
+    id2label = {int(k): str(v).lower() for k, v in raw_id2label.items()}
 
-    predicted_id = int(
-        torch.argmax(
-            outputs.logits,
-            dim=-1
-        )[0]
-        .cpu()
-    )
+    def _class_index(target):
+        for idx, label in id2label.items():
+            normalized = label.replace("_", "-").replace(" ", "-")
+            if target in normalized:
+                return idx
+        return None
 
+    contradiction_id = _class_index("contradiction")
+    entailment_id = _class_index("entailment")
+    neutral_id = _class_index("neutral")
+    if None in (contradiction_id, entailment_id, neutral_id):
+        raise ValueError(
+            f"Cannot resolve contradiction/entailment/neutral from model config id2label={id2label}"
+        )
+
+    predicted_id = int(torch.argmax(outputs.logits, dim=-1)[0].cpu())
     return {
-        "nli_label": label_map[predicted_id],
-        "contradiction": float(probabilities[0]),
-        "entailment": float(probabilities[1]),
-        "neutral": float(probabilities[2]),
+        "nli_label": id2label[predicted_id],
+        "contradiction": float(probabilities[contradiction_id]),
+        "entailment": float(probabilities[entailment_id]),
+        "neutral": float(probabilities[neutral_id]),
     }
 
 
@@ -2255,14 +2308,14 @@ def lexical_support(
 
     proposition_terms = set(
         re.findall(
-            r"\\b[a-zA-Z0-9]+\\b",
+            r"\b[a-zA-Z0-9]+\b",
             proposition_text,
         )
     )
 
     evidence_terms = set(
         re.findall(
-            r"\\b[a-zA-Z0-9]+\\b",
+            r"\b[a-zA-Z0-9]+\b",
             evidence_text,
         )
     )
@@ -2634,12 +2687,11 @@ def check_timestamp_consistency_pipeline(
     Check whether a claim timestamp is consistent with
     the timestamp of its selected evidence.
 
-    The evidence is considered temporally consistent when
-    the claim interval and evidence interval overlap, or
-    when their boundaries are within the configured tolerance.
-
-    If usable timestamps are unavailable, return
-    NOT_EVALUATED rather than forcing a decision.
+    Overlapping or nearby intervals PASS. A distant, non-overlapping
+    evidence interval is NOT_EVALUATED rather than FAIL: a later meeting
+    utterance can corroborate an earlier statement without being the
+    timestamp of the original claim. The actual source claim timestamp
+    remains the timestamp inherited from its source utterance.
     """
 
     # --------------------------------------------------------
@@ -2717,10 +2769,15 @@ def check_timestamp_consistency_pipeline(
     else:
         temporal_distance = claim_start - evidence_end
 
+    # A non-overlapping later transcript passage is not, by itself,
+    # a temporal contradiction. It may be a later corroboration or
+    # summary of an earlier statement. Keep the measured distance for
+    # audit, but do not reject a semantically supported claim solely
+    # because its corroborating utterance occurred later.
     if temporal_distance <= tolerance_seconds:
         status = "PASS"
     else:
-        status = "FAIL"
+        status = "NOT_EVALUATED"
 
     return {
         "status": status,

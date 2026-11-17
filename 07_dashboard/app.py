@@ -749,6 +749,273 @@ def render_audio_evidence_player(
                 )
 
 
+def _render_transcript_dependency_scenario(title, scenario):
+    """Render transcript-explicit scenario edges separately from NLI-verified DAG edges."""
+    if not isinstance(scenario, dict):
+        return
+    tasks = scenario.get("tasks", []) or []
+    edges = scenario.get("dependencies", []) or []
+    dag = scenario.get("dag", {}) or {}
+    validation = dag.get("validation", {}) or {}
+    st.markdown(f"##### {title}")
+    st.caption(scenario.get("interpretation", ""))
+    a, b, c = st.columns(3)
+    a.metric("Tasks", len(tasks))
+    b.metric("Explicit relationships", len(edges))
+    bval = "Yes" if validation.get("cycle_detected") else "No"
+    c.metric("Cycle detected", bval)
+    if tasks:
+        dot = ["digraph Scenario {", "rankdir=LR;", 'node [shape=box, style="rounded", fontsize=10];']
+        def q(v):
+            return '"' + str(v).replace('\\', '\\\\').replace('"', '\\"') + '"'
+        for task in tasks:
+            label = f"{task.get('task_id')}\\n{task.get('task', '')}"
+            dot.append(f"{q(task.get('task_id'))} [label={q(label)}];")
+        for edge in edges:
+            dot.append(f"{q(edge.get('prerequisite_id'))} -> {q(edge.get('dependent_id'))};")
+        dot.append("}")
+        try:
+            st.graphviz_chart("\n".join(dot), use_container_width=True)
+        except Exception:
+            st.code("\n".join(dot), language="dot")
+        st.table([{"Task ID": t.get("task_id"), "Task": t.get("task"),
+                   "Speaker": t.get("reported_by", "Not identified")} for t in tasks])
+        with st.expander("Transcript quotes supporting these relationships", expanded=False):
+            for edge in edges:
+                st.markdown(f"**{edge.get('prerequisite_id')} → {edge.get('dependent_id')}**")
+                st.write(edge.get("evidence_text", ""))
+                st.caption(f"{edge.get('evidence_start')}s–{edge.get('evidence_end')}s | "
+                           f"Speaker: {edge.get('evidence_speaker', 'Unknown')} | "
+                           "Transcript quote match: exact normalized substring")
+    if validation.get("cycle_detected"):
+        st.warning("This transcript-explicit scenario contains a circular wait. It is a candidate view, not a Phase 1/NLI-verified DAG.")
+    else:
+        st.success("This transcript-explicit scenario is acyclic. It shows the proposed execution sequence, not an NLI-verified DAG.")
+
+
+def render_phase2_dependency_analysis(phase2_result, meeting_id="meeting"):
+    """Render Phase 2 task dependencies with compact graph and readable table."""
+    import json as _json
+    import textwrap as _textwrap
+
+    st.markdown("### 🧩 Phase 2 — Task Dependency Analysis")
+
+    if not isinstance(phase2_result, dict):
+        st.info("Phase 2 analysis is not available in this saved result.")
+        return
+
+    status = str(phase2_result.get("status", "unknown"))
+    st.caption(phase2_result.get("message", ""))
+
+    scenarios = phase2_result.get("transcript_dependency_views", {}) or {}
+    if scenarios:
+        st.markdown("#### Transcript-grounded dependency scenarios")
+        st.info("These scenario graphs are built from explicit statements and exact transcript quotes. They are shown separately from the NLI-verified DAG below; they do not change Phase 1 claim status or verified edges.")
+        _render_transcript_dependency_scenario("1. Original dependency state — circular wait", scenarios.get("original_state", {}))
+        _render_transcript_dependency_scenario("2. Resolved dependency state — revised execution plan", scenarios.get("resolved_state", {}))
+
+    tasks = phase2_result.get("tasks", []) or []
+    dependencies = phase2_result.get("dependencies", []) or []
+    reviewed = phase2_result.get("candidate_dependencies", []) or []
+    dag_data = phase2_result.get("dag", {}) or {}
+    validation = dag_data.get("validation", {}) or {}
+    ready = dag_data.get("ready_tasks", []) or []
+    order = dag_data.get("topological_order", []) or []
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Verified action tasks", len(tasks))
+    m2.metric("Verified dependencies", len(dependencies))
+    m3.metric("Ready tasks", len(ready))
+    m4.metric("Cycle detected", "Yes" if validation.get("cycle_detected") else "No")
+
+    if status in ("skipped_no_model", "skipped_no_transcript", "extraction_error"):
+        st.warning(
+            f"Phase 2 status: {status.replace('_', ' ').title()}. "
+            "Phase 1 verified minutes remain available."
+        )
+    elif status == "completed_no_verified_dependencies":
+        st.info(
+            "Phase 2 completed. No dependency passed both transcript-evidence "
+            "validation and relation-specific NLI."
+        )
+    elif status == "completed":
+        st.success("Phase 2 completed with verified task dependencies.")
+
+    if tasks:
+        st.markdown("#### Dependency Graph")
+
+        if not dependencies:
+            # For an edgeless DAG, show independent nodes side-by-side.
+            # This is clearer than a Graphviz layout that stretches isolated nodes.
+            columns_per_row = min(3, len(tasks))
+            for row_start in range(0, len(tasks), columns_per_row):
+                row_tasks = tasks[row_start:row_start + columns_per_row]
+                cols = st.columns(columns_per_row)
+                for col, task in zip(cols, row_tasks):
+                    with col:
+                        with st.container(border=True):
+                            st.markdown(f"**{task.get('task_id', 'Task')}**")
+                            st.write(task.get("task", "Task description unavailable"))
+                            st.caption("Independent · Ready")
+            st.caption("No arrows are shown because no prerequisite relationships passed verification.")
+        else:
+            # For connected DAGs, use Graphviz labels with real DOT line breaks.
+            dot_lines = [
+                "digraph TaskDependencies {",
+                "rankdir=LR;",
+                'graph [nodesep=0.35, ranksep=0.55, pad=0.15, bgcolor="transparent"];',
+                'node [shape=box, style="rounded", fontsize=10, margin="0.12,0.08", width=2.5];',
+                'edge [arrowsize=0.7];',
+            ]
+
+            def _dot_quote(value):
+                return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+            for task in tasks:
+                task_id = str(task.get("task_id", ""))
+                description = " ".join(str(task.get("task", "")).split())
+                wrapped = _textwrap.wrap(description, width=28) or ["Task description unavailable"]
+                if len(wrapped) > 5:
+                    wrapped = wrapped[:5]
+                    wrapped[-1] = wrapped[-1].rstrip(" .") + "…"
+                # Graphviz interprets literal backslash-n as a line break.
+                label_text = task_id + "\\n" + "\\n".join(wrapped)
+                dot_lines.append(f"{_dot_quote(task_id)} [label={_dot_quote(label_text)}];")
+
+            for edge in dependencies:
+                dot_lines.append(
+                    f"{_dot_quote(edge.get('prerequisite_id'))} -> "
+                    f"{_dot_quote(edge.get('dependent_id'))};"
+                )
+            dot_lines.append("}")
+            try:
+                st.graphviz_chart("\n".join(dot_lines), use_container_width=True)
+            except Exception as exc:
+                st.warning(f"Graph rendering unavailable: {exc}")
+                st.code("\n".join(dot_lines), language="dot")
+
+        # Restore the requested table layout. Use a static Streamlit table and
+        # wrapping CSS so long task text is not clipped in a narrow dataframe cell.
+        st.markdown("#### Action Tasks")
+        st.markdown(
+            """<style>
+            div[data-testid="stTable"] table {width:100%; table-layout:fixed;}
+            div[data-testid="stTable"] th, div[data-testid="stTable"] td {
+                white-space:normal !important;
+                overflow-wrap:anywhere !important;
+                word-break:normal !important;
+                vertical-align:top !important;
+            }
+            div[data-testid="stTable"] th:nth-child(2),
+            div[data-testid="stTable"] td:nth-child(2) {min-width:360px; width:48%;}
+            </style>""",
+            unsafe_allow_html=True,
+        )
+        task_rows = [
+            {
+                "Task ID": task.get("task_id"),
+                "Task": task.get("task"),
+                "Owner": task.get("owner") or "Unassigned",
+                "Reported by": task.get("reported_by") or "Unknown",
+                "Source claim": task.get("source_claim_number"),
+                "Claim status": task.get("status"),
+            }
+            for task in tasks
+        ]
+        st.table(task_rows)
+
+        with st.expander("Task source evidence", expanded=False):
+            for task in tasks:
+                evidence = task.get("source_evidence", {}) or {}
+                st.markdown(f"**{task.get('task_id')} — {task.get('task')}**")
+                st.caption(
+                    f"Reported by: {task.get('reported_by') or 'Unknown'} | "
+                    f"Claim time: {format_timestamp(task.get('source_start'))} – "
+                    f"{format_timestamp(task.get('source_end'))}"
+                )
+                if evidence.get("text"):
+                    st.write(evidence.get("text"))
+                else:
+                    st.caption("No source evidence text was stored for this task.")
+
+    if dependencies:
+        st.markdown("#### Verified Dependency Evidence")
+        for edge in dependencies:
+            with st.container(border=True):
+                st.write(f"**{edge.get('prerequisite_id')} → {edge.get('dependent_id')}**")
+                st.write(edge.get("evidence_text") or "No quote recorded.")
+                st.caption(
+                    f"Transcript time: {format_timestamp(edge.get('evidence_start'))} – "
+                    f"{format_timestamp(edge.get('evidence_end'))} | "
+                    f"Speaker: {edge.get('evidence_speaker') or 'Unknown'} | "
+                    f"NLI: {edge.get('nli_label') or 'N/A'} "
+                    f"(entailment={edge.get('nli_entailment') if edge.get('nli_entailment') is not None else 'N/A'})"
+                )
+    elif status == "completed_no_verified_dependencies":
+        st.info("No verified prerequisite edges are present. Tasks are independent; no ordering is inferred.")
+
+    if validation.get("is_dag"):
+        st.markdown("#### Dependency-Respecting Execution Order")
+        if dependencies and order:
+            st.write(" → ".join(order))
+        elif tasks:
+            st.caption("No required execution sequence was established; the tasks are independent in the verified DAG.")
+        else:
+            st.caption("No tasks to order.")
+        st.markdown("#### Ready Tasks")
+        st.write(" · ".join(str(task_id) for task_id in ready) if ready else "None")
+    else:
+        st.error("The dependency graph contains a cycle. Execution order is withheld until the cycle is resolved.")
+
+    if tasks:
+        st.markdown("#### Downstream Change-Impact Analysis")
+        task_options = {
+            f"{task.get('task_id')} — {' '.join(str(task.get('task', '')).split())[:90]}": task.get("task_id")
+            for task in tasks
+        }
+        selected_label = st.selectbox(
+            "Select a task to inspect downstream impact",
+            list(task_options.keys()),
+            key=f"phase2_impact_{meeting_id}"
+        )
+        selected_id = task_options[selected_label]
+        try:
+            graph = phase2_dag.build_dependency_dag(tasks, dependencies)
+            impact = phase2_dag.get_downstream_impact(graph, selected_id)
+            impacted = impact.get("impacted_tasks", [])
+            if impacted:
+                st.write(f"Changing or delaying **{selected_id}** may affect:")
+                for item in impacted:
+                    st.write(f"- **{item.get('task_id')}** — {item.get('task')}")
+            else:
+                st.caption("No downstream tasks are linked to this task in the verified DAG.")
+        except Exception as exc:
+            st.warning(f"Impact analysis unavailable: {exc}")
+
+    if reviewed:
+        st.markdown("#### Unverified / Rejected Dependency Candidates")
+        for index, candidate in enumerate(reviewed, start=1):
+            source_id = candidate.get("prerequisite_id", "?")
+            target_id = candidate.get("dependent_id", "?")
+            review_status = candidate.get("verification_status", "NOT_EVALUATED")
+            reason = candidate.get("verification_reason", "")
+            with st.expander(
+                f"{index}. {source_id} → {target_id} | {review_status} | {reason}",
+                expanded=False
+            ):
+                evidence_text = candidate.get("evidence_text") or candidate.get("evidence_quote")
+                if evidence_text:
+                    st.write(evidence_text)
+                else:
+                    st.caption("No transcript evidence quote was retained.")
+                if candidate.get("evidence_start") is not None:
+                    st.caption(
+                        f"Transcript time: {format_timestamp(candidate.get('evidence_start'))} – "
+                        f"{format_timestamp(candidate.get('evidence_end'))}"
+                    )
+                if reason:
+                    st.caption(f"Verification reason: {reason}")
+
 def render_processed_meeting(
     result,
     result_path,
@@ -776,6 +1043,21 @@ def render_processed_meeting(
     claims = normalized[
         "claims"
     ]
+
+    # --------------------------------------------------------
+    # Phase 2 — Evidence-grounded task dependency DAG
+    # Render only; this does not run inference.
+    # --------------------------------------------------------
+    raw_result = normalized.get("raw", {})
+    phase2_result = (
+        raw_result.get("phase2_dependency_analysis")
+        if isinstance(raw_result, dict)
+        else None
+    )
+    render_phase2_dependency_analysis(
+        phase2_result,
+        meeting_id=meeting_id
+    )
 
 
     if view_mode == "live":
@@ -1602,6 +1884,11 @@ meeting_metadata = {
 import sys
 import torch
 
+# Colab compatibility: this application does not use Transformers vision
+# features. Avoid importing an incompatible optional torchvision installation.
+import transformers.utils.import_utils as _transformers_import_utils
+_transformers_import_utils._torchvision_available = False
+
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM
@@ -1616,6 +1903,8 @@ if str(DASHBOARD_DIR) not in sys.path:
     )
 
 import meeting_pipeline as mp
+import dependency_extraction as phase2_dependency_extraction
+import task_dependency_dag as phase2_dag
 
 
 @st.cache_resource(show_spinner=False)
@@ -1656,6 +1945,22 @@ def load_qwen_generator():
     model.eval()
 
     return model, tokenizer
+
+
+def verify_phase2_dependency_relation(evidence_text, proposition):
+    """Reuse Phase 1's cached DeBERTa NLI model for dependency-edge verification."""
+    resources = getattr(mp, "_NLI_RESOURCES", None)
+    if resources is None:
+        resources = mp.load_nli_model()
+        mp._NLI_RESOURCES = resources
+    tokenizer, model, device = resources
+    return mp.run_nli(
+        evidence_text,
+        proposition,
+        tokenizer,
+        model,
+        device
+    )
 
 
 def process_uploaded_meeting(
@@ -1739,6 +2044,46 @@ def process_uploaded_meeting(
             []
         )
     )
+
+    # --------------------------------------------------------
+    # Save the exact WhisperX + Pyannote speaker-aligned transcript
+    # for later Phase 2 inspection/reuse. This is an intermediate
+    # artifact; it does not modify the Phase 1 utterances.
+    # --------------------------------------------------------
+
+    transcript_output_path = None
+    transcript_save_error = None
+
+    try:
+        transcript_dir = PROJECT_ROOT / "outputs" / "transcripts"
+        transcript_dir.mkdir(parents=True, exist_ok=True)
+
+        transcript_output_path = (
+            transcript_dir
+            / f"{audio_path.stem}_speaker_transcript.json"
+        )
+
+        transcript_payload = {
+            "meeting_id": audio_path.stem,
+            "source_audio": audio_path.name,
+            "utterance_count": len(utterances),
+            "utterances": utterances,
+        }
+
+        with open(transcript_output_path, "w", encoding="utf-8") as transcript_file:
+            json.dump(
+                transcript_payload,
+                transcript_file,
+                indent=2,
+                ensure_ascii=False
+            )
+
+        transcript_output_path = str(transcript_output_path)
+
+    except Exception as transcript_error:
+        # Transcript archival must never interrupt the validated Phase 1 flow.
+        transcript_save_error = str(transcript_error)
+        transcript_output_path = None
 
     # --------------------------------------------------------
     # 5. MoM candidate detection
@@ -1837,6 +2182,30 @@ def process_uploaded_meeting(
         )
 
     # --------------------------------------------------------
+    # 8B. Phase 2 — Task dependency extraction and verification
+    # --------------------------------------------------------
+    # Failure is isolated: Phase 1 verified claims are never discarded.
+    try:
+        phase2_result = phase2_dependency_extraction.extract_action_dependency_dag(
+            claims=verification_results,
+            utterances=utterances,
+            model=generator_model,
+            tokenizer=generator_tokenizer,
+            nli_verifier=verify_phase2_dependency_relation,
+            entailment_threshold=0.80
+        )
+    except Exception as phase2_error:
+        phase2_result = {
+            "status": "extraction_error",
+            "tasks": [],
+            "dependencies": [],
+            "candidate_dependencies": [],
+            "dag": {"nodes": [], "edges": [], "validation": {"is_dag": True, "cycle_detected": False, "cycles": []},
+                    "topological_order": [], "ready_tasks": []},
+            "message": f"Phase 2 failed safely; Phase 1 results are retained: {phase2_error}"
+        }
+
+    # --------------------------------------------------------
     # 9. Verification summary
     # --------------------------------------------------------
 
@@ -1929,7 +2298,14 @@ def process_uploaded_meeting(
 
         "claims": (
             verification_results
-        )
+        ),
+
+        "phase2_dependency_analysis": (
+            phase2_result
+        ),
+
+        "transcript_output_path": transcript_output_path,
+        "transcript_save_error": transcript_save_error
     }
 
 
@@ -2251,6 +2627,241 @@ def create_context_pdf(
                 10
             )
         )
+
+    # --------------------------------------------------------
+    # Phase 2 — Evidence-Grounded Task Dependency Analysis
+    # --------------------------------------------------------
+    phase2 = normalized.get("phase2_dependency_analysis") or result.get(
+        "phase2_dependency_analysis", {}
+    )
+    if not isinstance(phase2, dict):
+        phase2 = {}
+
+    views = phase2.get("transcript_dependency_views", {})
+    if not isinstance(views, dict):
+        views = {}
+
+    story.append(PageBreak())
+    story.append(Paragraph(
+        "Phase 2 – Evidence-Grounded Task Dependency Analysis",
+        heading_style
+    ))
+    story.append(Paragraph(
+        "This section records task dependencies explicitly supported by the meeting transcript. "
+        "Transcript-explicit candidate edges are shown separately from edges that pass relation-specific "
+        "NLI verification.", body_style
+    ))
+    story.append(Spacer(1, 6))
+
+    phase2_tasks = phase2.get("tasks", []) or []
+    phase2_edges = phase2.get("dependencies", []) or []
+    phase2_candidates = phase2.get("candidate_dependencies", []) or []
+    phase2_dag = phase2.get("dag", {}) or {}
+    phase2_validation = phase2_dag.get("validation", {}) or {}
+
+    story.append(Paragraph("Verified Phase 2 DAG result", heading_style))
+    story.append(Paragraph(
+        f"<b>Status:</b> {escape(str(phase2.get('status', 'not available')))}<br/>"
+        f"<b>Tasks:</b> {len(phase2_tasks)} &nbsp;&nbsp; "
+        f"<b>NLI-verified dependency edges:</b> {len(phase2_edges)} &nbsp;&nbsp; "
+        f"<b>Candidate edges:</b> {len(phase2_candidates)}<br/>"
+        f"<b>Cycle detected in verified DAG:</b> "
+        f"{'Yes' if phase2_validation.get('cycle_detected') else 'No'}<br/>"
+        f"<b>NLI entailment threshold:</b> {phase2.get('nli_entailment_threshold', 'not recorded')}",
+        body_style
+    ))
+
+    if phase2_tasks:
+        task_rows = [["Task ID", "Task", "Owner", "Status"]]
+        for task in phase2_tasks:
+            task_rows.append([
+                str(task.get("task_id", "")),
+                Paragraph(escape(str(task.get("task", ""))), body_style),
+                str(task.get("owner") or "Not explicitly assigned"),
+                str(task.get("status", ""))
+            ])
+        from reportlab.platypus import Table, TableStyle
+        from reportlab.lib import colors
+        task_table = Table(task_rows, colWidths=[48, 220, 100, 105], repeatRows=1)
+        task_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E8EDF5")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#172B4D")),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#B8C2CC")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(task_table)
+        story.append(Spacer(1, 8))
+
+    if phase2_edges or phase2_candidates:
+        story.append(Paragraph("Dependency verification details", heading_style))
+        edge_rows = [["Type", "Dependency", "Transcript evidence", "Verification"]]
+        for edge_type, edge_list in (("NLI verified", phase2_edges), ("Candidate", phase2_candidates)):
+            for edge in edge_list:
+                source = str(edge.get("prerequisite_id", "?"))
+                target = str(edge.get("dependent_id", "?"))
+                evidence = str(edge.get("evidence_text", ""))
+                speaker = str(edge.get("evidence_speaker", "Unknown"))
+                start = edge.get("evidence_start")
+                end = edge.get("evidence_end")
+                time_text = ""
+                if start is not None:
+                    time_text = f" ({format_timestamp(start)}–{format_timestamp(end)})"
+                verification = str(edge.get("verification_status", edge_type))
+                if edge.get("nli_label") is not None:
+                    verification += f"; NLI={edge.get('nli_label')}; entailment={float(edge.get('nli_entailment') or 0):.3f}"
+                edge_rows.append([
+                    edge_type,
+                    f"{source} → {target}",
+                    Paragraph(escape(evidence) + f"<br/><font size='7'>Speaker: {escape(speaker)}{escape(time_text)}</font>", body_style),
+                    Paragraph(escape(verification), body_style)
+                ])
+        edge_table = Table(edge_rows, colWidths=[65, 70, 230, 108], repeatRows=1)
+        edge_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E8EDF5")),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#B8C2CC")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(edge_table)
+        story.append(Spacer(1, 10))
+
+    # A compact vector diagram: boxes and arrowheads are drawn directly in the PDF.
+    from reportlab.platypus import Flowable
+    from reportlab.lib import colors
+    import math
+
+    class DependencyDiagram(Flowable):
+        def __init__(self, tasks, edges, cyclic=False, width=500):
+            super().__init__()
+            self.tasks = tasks
+            self.edges = edges
+            self.cyclic = cyclic
+            self.width = width
+            self.height = 170 if cyclic else 205
+
+        def wrap(self, availWidth, availHeight):
+            self.width = min(self.width, availWidth)
+            return self.width, self.height
+
+        def draw(self):
+            c = self.canv
+            by_id = {str(t.get("task_id")): t for t in self.tasks}
+            ids = list(by_id)
+            if self.cyclic and len(ids) >= 3:
+                w, h = 138, 42
+                centers = {
+                    ids[0]: (self.width / 2, self.height - 34),
+                    ids[1]: (82, 48),
+                    ids[2]: (self.width - 82, 48),
+                }
+                for extra in ids[3:]:
+                    centers[extra] = (self.width / 2, 48)
+            else:
+                w, h = min(112, (self.width - 30) / max(1, len(ids))), 48
+                gap = (self.width - len(ids) * w) / (len(ids) + 1)
+                centers = {tid: (gap + i * (w + gap) + w / 2, self.height / 2)
+                           for i, tid in enumerate(ids)}
+
+            c.setFont("Helvetica", 7)
+            for tid, (cx, cy) in centers.items():
+                task = by_id[tid]
+                x, y = cx - w / 2, cy - h / 2
+                c.setFillColor(colors.HexColor("#EEF3F8"))
+                c.setStrokeColor(colors.HexColor("#52677D"))
+                c.roundRect(x, y, w, h, 5, fill=1, stroke=1)
+                c.setFillColor(colors.HexColor("#172B4D"))
+                c.setFont("Helvetica-Bold", 8)
+                c.drawCentredString(cx, y + h - 12, tid)
+                import textwrap
+                label = str(task.get("task", ""))
+                wrap_width = max(14, int(w / 4.0))
+                label_lines = textwrap.wrap(label, width=wrap_width)[:2]
+                if label_lines and len(textwrap.wrap(label, width=wrap_width)) > 2:
+                    label_lines[-1] = label_lines[-1][:max(8, wrap_width - 3)] + "..."
+                c.setFont("Helvetica", 6.2)
+                if len(label_lines) == 1:
+                    c.drawCentredString(cx, y + 12, label_lines[0])
+                else:
+                    c.drawCentredString(cx, y + 15, label_lines[0])
+                    c.drawCentredString(cx, y + 7, label_lines[1])
+
+            c.setStrokeColor(colors.HexColor("#245B8F"))
+            c.setFillColor(colors.HexColor("#245B8F"))
+            for edge in self.edges:
+                a = str(edge.get("prerequisite_id", ""))
+                b = str(edge.get("dependent_id", ""))
+                if a not in centers or b not in centers:
+                    continue
+                x1, y1 = centers[a]
+                x2, y2 = centers[b]
+                dx, dy = x2 - x1, y2 - y1
+                dist = max(1, math.hypot(dx, dy))
+                ux, uy = dx / dist, dy / dist
+                sx, sy = x1 + ux * (w * .48), y1 + uy * (h * .48)
+                ex, ey = x2 - ux * (w * .48), y2 - uy * (h * .48)
+                c.setLineWidth(1.2)
+                c.line(sx, sy, ex, ey)
+                angle = math.atan2(ey - sy, ex - sx)
+                size = 5
+                p = c.beginPath()
+                p.moveTo(ex, ey)
+                p.lineTo(ex - size * math.cos(angle - .45), ey - size * math.sin(angle - .45))
+                p.lineTo(ex - size * math.cos(angle + .45), ey - size * math.sin(angle + .45))
+                p.close()
+                c.drawPath(p, fill=1, stroke=0)
+
+    def append_dependency_view(view_key, heading):
+        view = views.get(view_key, {})
+        if not isinstance(view, dict) or not view:
+            return
+        tasks = view.get("tasks", []) or []
+        edges = view.get("dependencies", []) or []
+        dag = view.get("dag", {}) or {}
+        validation = dag.get("validation", {}) or {}
+        cycle = bool(validation.get("cycle_detected"))
+        story.append(Paragraph(heading, heading_style))
+        story.append(Paragraph(escape(str(view.get("interpretation", ""))), body_style))
+        story.append(Paragraph(
+            f"<b>Tasks:</b> {len(tasks)} &nbsp;&nbsp; <b>Edges:</b> {len(edges)} &nbsp;&nbsp; "
+            f"<b>Cycle detected:</b> {'Yes' if cycle else 'No'} &nbsp;&nbsp; "
+            f"<b>Classification:</b> {escape(str(view.get('status', 'candidate')))}",
+            body_style
+        ))
+        if tasks and edges:
+            story.append(DependencyDiagram(tasks, edges, cyclic=cycle))
+        if edges:
+            for edge in edges:
+                story.append(Paragraph(
+                    f"<b>{escape(str(edge.get('prerequisite_id', '?')))} → "
+                    f"{escape(str(edge.get('dependent_id', '?')))}</b>: "
+                    f"{escape(str(edge.get('evidence_text', '')))}",
+                    body_style
+                ))
+                start = edge.get("evidence_start")
+                end = edge.get("evidence_end")
+                if start is not None:
+                    story.append(Paragraph(
+                        f"<font size='8'>Speaker: {escape(str(edge.get('evidence_speaker', 'Unknown')))}; "
+                        f"time: {format_timestamp(start)}–{format_timestamp(end)}; "
+                        f"status: {escape(str(edge.get('verification_status', 'candidate')))}</font>",
+                        body_style
+                    ))
+        story.append(Spacer(1, 8))
+
+    append_dependency_view("original_state", "Original dependency state – circular wait")
+    append_dependency_view("resolved_state", "Resolved dependency state – revised execution plan")
+
+    if not views:
+        story.append(Paragraph(
+            "No transcript dependency views were saved for this meeting.", body_style
+        ))
 
     document.build(
         story
@@ -2615,6 +3226,12 @@ with implemented_col:
                     break
 
 
+    # After a new meeting is processed, the keyed selectbox can retain
+    # its previous index from Streamlit session state. Apply the newly
+    # calculated live-result index BEFORE creating the widget.
+    if st.session_state.pop("_force_latest_live_meeting_selection", False):
+        st.session_state["implemented_meeting_selector"] = default_index
+
     selected_index = st.selectbox(
         "Select Meeting",
         range(
@@ -2927,6 +3544,24 @@ with process_col:
                     )
                 )
 
+                # Save Phase 2 independently so its status/evidence can be
+                # inspected without changing or replacing Phase 1 outputs.
+                phase2_dir = PROJECT_ROOT / "outputs" / "phase2_dag"
+                phase2_dir.mkdir(parents=True, exist_ok=True)
+                phase2_result_path = (
+                    phase2_dir / f"{saved_path.stem}_phase2_dependency_dag.json"
+                )
+                phase2_payload = pipeline_result.get(
+                    "phase2_dependency_analysis", {}
+                )
+                with open(phase2_result_path, "w", encoding="utf-8") as phase2_file:
+                    json.dump(
+                        phase2_payload,
+                        phase2_file,
+                        indent=2,
+                        ensure_ascii=False
+                    )
+                pipeline_result["phase2_output_path"] = str(phase2_result_path)
 
                 # ------------------------------------------------
                 # Save result
@@ -2985,6 +3620,12 @@ with process_col:
                 st.session_state[
                     "active_view"
                 ] = "live"
+
+                # The meeting selector is keyed and may retain an older
+                # selection. Force it to the live option on the next rerun.
+                st.session_state[
+                    "_force_latest_live_meeting_selection"
+                ] = True
 
 
                 # Keep compatibility with old state
