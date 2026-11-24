@@ -1016,6 +1016,72 @@ def render_phase2_dependency_analysis(phase2_result, meeting_id="meeting"):
                 if reason:
                     st.caption(f"Verification reason: {reason}")
 
+def load_saved_phase2_result(raw_result, result_path, meeting_id):
+    """
+    Load Phase 2 from the embedded meeting JSON first, then from its
+    separately saved outputs/phase2_dag artifact. This is read-only.
+    """
+    raw_result = raw_result if isinstance(raw_result, dict) else {}
+
+    embedded = raw_result.get("phase2_dependency_analysis")
+    if isinstance(embedded, dict) and embedded:
+        return embedded
+
+    candidates = []
+
+    explicit_path = raw_result.get("phase2_output_path")
+    if explicit_path:
+        explicit = Path(str(explicit_path))
+        candidates.append(explicit if explicit.is_absolute() else PROJECT_ROOT / explicit)
+
+    result_stem = Path(result_path).stem
+    for suffix in ("_verified_mom", "_D9V2_result", "_result"):
+        if result_stem.endswith(suffix):
+            result_stem = result_stem[:-len(suffix)]
+            break
+
+    identifiers = []
+    for value in (meeting_id, result_stem):
+        value = str(value or "").strip()
+        if value and value not in identifiers:
+            identifiers.append(value)
+
+    phase2_dir = PROJECT_ROOT / "outputs" / "phase2_dag"
+    for identifier in identifiers:
+        candidates.extend([
+            phase2_dir / f"{identifier}_phase2_dependency_dag.json",
+            phase2_dir / f"{identifier}_phase2_rerun.json",
+            phase2_dir / f"{identifier}_phase2.json",
+        ])
+
+    # Also support existing Phase 2 artifacts with a different suffix,
+    # but only when their filename is tied to this exact meeting identifier.
+    if phase2_dir.exists():
+        for identifier in identifiers:
+            candidates.extend(sorted(
+                phase2_dir.glob(f"{identifier}*phase2*.json"),
+                key=lambda path: path.stat().st_mtime,
+                reverse=True,
+            ))
+
+    seen = set()
+    for candidate_path in candidates:
+        try:
+            resolved = candidate_path.resolve()
+            if resolved in seen or not resolved.is_file():
+                continue
+            seen.add(resolved)
+            with open(resolved, "r", encoding="utf-8") as phase2_file:
+                payload = json.load(phase2_file)
+            if isinstance(payload, dict):
+                nested = payload.get("phase2_dependency_analysis")
+                return nested if isinstance(nested, dict) else payload
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            continue
+
+    return None
+
+
 def render_processed_meeting(
     result,
     result_path,
@@ -1044,22 +1110,6 @@ def render_processed_meeting(
         "claims"
     ]
 
-    # --------------------------------------------------------
-    # Phase 2 — Evidence-grounded task dependency DAG
-    # Render only; this does not run inference.
-    # --------------------------------------------------------
-    raw_result = normalized.get("raw", {})
-    phase2_result = (
-        raw_result.get("phase2_dependency_analysis")
-        if isinstance(raw_result, dict)
-        else None
-    )
-    render_phase2_dependency_analysis(
-        phase2_result,
-        meeting_id=meeting_id
-    )
-
-
     if view_mode == "live":
 
         st.subheader(
@@ -1079,6 +1129,22 @@ def render_processed_meeting(
        
     st.caption(
         f"Result file: {Path(result_path).name}"
+    )
+
+    # --------------------------------------------------------
+    # Phase 2 — Evidence-grounded task dependency DAG
+    # Embedded result first; companion Phase 2 artifact as fallback.
+    # Render only; this does not run inference.
+    # --------------------------------------------------------
+    raw_result = normalized.get("raw", {})
+    phase2_result = load_saved_phase2_result(
+        raw_result=raw_result,
+        result_path=result_path,
+        meeting_id=meeting_id,
+    )
+    render_phase2_dependency_analysis(
+        phase2_result,
+        meeting_id=meeting_id,
     )
 
 

@@ -24,9 +24,78 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s']", " ", text)).strip()
 
 
-def prepare_action_tasks(claims: List[Dict[str, Any]], require_verified: bool = True) -> List[Dict[str, Any]]:
-    """Use only ACTION claims; by default exclude every non-VERIFIED claim.
+def _is_reported_context_claim(text: str) -> bool:
+    """Reject claims that merely report background information as an ACTION."""
+    normalized = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+    # These are attribution/reporting statements, not work items. Keep this
+    # deliberately narrow: do not reject ordinary task descriptions based on
+    # broad topic or verb heuristics.
+    return bool(re.match(
+        r"^(?:(?:because|yesterday)\s+)?you\s+(?:said|mentioned|told me)\b",
+        normalized,
+    ))
 
+
+def _normalize_action_task(text: str) -> tuple[Optional[str], Optional[str]]:
+    """Normalize the dependent action in a blocked-work statement."""
+    original = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not original or _is_reported_context_claim(original):
+        return None, None
+
+    blocked = re.match(
+        r"^(?:I|we|you|they|he|she)\s+(?:can't|cannot|can’t|won't|will not)\s+"
+        r"(?P<action>.+?)\s+until\s+(?P<prerequisite>.+)$",
+        original,
+        flags=re.IGNORECASE,
+    )
+    if blocked:
+        action = blocked.group("action").strip(" \t.,;:")
+        if action:
+            action = action[0].upper() + action[1:]
+            return action, "blocked_action_normalized"
+
+    return original, "claim_used_as_task"
+
+
+def _extract_blocked_prerequisite(text: str) -> Optional[str]:
+    """Extract only clearly action-bearing 'until' clauses; never infer an owner."""
+    original = re.sub(r"\s+", " ", str(text or "")).strip()
+    match = re.match(
+        r"^(?:I|we|you|they|he|she)\s+(?:can't|cannot|can’t|won't|will not)\s+"
+        r".+?\s+until\s+(?P<clause>.+)$",
+        original,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+    clause = match.group("clause").strip(" \t.,;:")
+    # Deliberately narrow action vocabulary: temporal clauses such as 'until Friday'
+    # and vague states are not promoted to task nodes.
+    action_verbs = (
+        "test", "check", "confirm", "validate", "verify", "review", "approve",
+        "complete", "finish", "implement", "build", "prepare", "provide",
+        "send", "share", "submit", "create", "update", "lock", "finalize",
+        "determine", "decide", "deploy", "integrate", "fix", "resolve",
+    )
+    subjectless = re.match(r"^(?:you|we|they|i)\s+(.+)$", clause, re.IGNORECASE)
+    if subjectless:
+        clause = subjectless.group(1).strip()
+    first_word = re.match(r"([A-Za-z]+)", clause)
+    if not first_word or first_word.group(1).lower() not in action_verbs:
+        # Preserve an explicit named actor only when followed by a known action.
+        named = re.match(r"^([A-Z][a-z]+)\s+([A-Za-z]+)\b(.*)$", clause)
+        if not named or named.group(2).lower() not in action_verbs:
+            return None
+    clause = clause[0].upper() + clause[1:]
+    return clause
+
+
+def prepare_action_tasks(claims: List[Dict[str, Any]], require_verified: bool = True) -> List[Dict[str, Any]]:
+    """Prepare conservative task candidates from verified ACTION claims.
+
+    Reported background/context statements are excluded. Blocked-work claims
+    retain their actionable work item (e.g. "I can't finish X until Y" becomes
+    "Finish X"). The original claim and its evidence remain attached for audit.
     The person who stated a task is stored as reported_by, never as its owner.
     """
     tasks = []
@@ -38,8 +107,9 @@ def prepare_action_tasks(claims: List[Dict[str, Any]], require_verified: bool = 
         status = str(claim.get("status") or "UNKNOWN").strip().upper()
         if require_verified and status != "VERIFIED":
             continue
-        text = str(claim.get("claim") or claim.get("claim_text") or "").strip()
-        if not text:
+        source_text = str(claim.get("claim") or claim.get("claim_text") or "").strip()
+        task_text, normalization = _normalize_action_task(source_text)
+        if not task_text:
             continue
         evidence = claim.get("evidence") or claim.get("selected_evidence") or {}
         if isinstance(evidence, list):
@@ -48,14 +118,12 @@ def prepare_action_tasks(claims: List[Dict[str, Any]], require_verified: bool = 
             evidence = {}
         # Explicit assignee only; speaker attribution is not ownership.
         explicit_owner = claim.get("owner") or claim.get("assignee") or claim.get("assigned_to")
-        tasks.append({
-            "task_id": f"T{len(tasks) + 1}",
+        common = {
             "source_claim_number": claim.get("number", claim_number),
-            "task": text,
             "owner": explicit_owner,
             "reported_by": claim.get("speaker"),
             "status": status,
-            "source_claim": text,
+            "source_claim": source_text,
             "source_start": _float(claim.get("start")),
             "source_end": _float(claim.get("end")),
             "source_evidence": {
@@ -65,7 +133,20 @@ def prepare_action_tasks(claims: List[Dict[str, Any]], require_verified: bool = 
                 "speaker": evidence.get("speaker"),
                 "evidence_id": evidence.get("evidence_id"),
             },
-        })
+        }
+        prerequisite = _extract_blocked_prerequisite(source_text)
+        candidates = []
+        if prerequisite and _norm(prerequisite) != _norm(task_text):
+            candidates.append((prerequisite, "blocked_prerequisite_candidate", "PREREQUISITE"))
+        candidates.append((task_text, normalization, "DEPENDENT" if prerequisite else "UNSPECIFIED"))
+        for candidate_text, candidate_normalization, task_role in candidates:
+            tasks.append({
+                "task_id": f"T{len(tasks) + 1}",
+                "task": candidate_text,
+                "task_normalization": candidate_normalization,
+                "task_role_candidate": task_role,
+                **common,
+            })
     return tasks
 
 
@@ -122,41 +203,189 @@ def _transcript_chunks(turns: List[Dict[str, Any]], chunk_seconds: float = 300.0
 
 
 
-def _extract_json_object(text: str) -> Dict[str, Any]:
-    """Extract the first valid JSON object from a Qwen response."""
+def _extract_json_payload(text: str, required_key: str) -> Dict[str, Any]:
+    """Extract the first valid JSON object containing the required top-level key."""
     cleaned = str(text or "").strip()
-
-    # Remove Markdown code fences if present.
-    cleaned = re.sub(
-        r"```(?:json)?|```",
-        "",
-        cleaned,
-        flags=re.IGNORECASE
-    ).strip()
-
+    cleaned = re.sub(r"```(?:json)?|```", "", cleaned, flags=re.IGNORECASE).strip()
     decoder = json.JSONDecoder()
 
-    # Try each opening brace. raw_decode stops at the end of
-    # the first complete JSON object, ignoring trailing text.
     for start in range(len(cleaned)):
         if cleaned[start] != "{":
             continue
-
         try:
-            parsed, end = decoder.raw_decode(cleaned[start:])
-
-            if isinstance(parsed, dict):
-                if "dependencies" in parsed:
-                    return parsed
-
+            parsed, _ = decoder.raw_decode(cleaned[start:])
+            if isinstance(parsed, dict) and required_key in parsed:
+                return parsed
         except json.JSONDecodeError:
             continue
 
     raise ValueError(
-        "Qwen response did not contain a valid JSON object "
-        "with a dependencies field. Response preview: "
-        + cleaned[:500]
+        f"Qwen response did not contain a valid JSON object with a {required_key!r} field. "
+        f"Response preview: {cleaned[:500]}"
     )
+
+
+def _extract_json_object(text: str) -> Dict[str, Any]:
+    """Backward-compatible dependency JSON parser."""
+    return _extract_json_payload(text, "dependencies")
+
+
+def _build_task_extraction_prompt(turns: List[Dict[str, Any]]) -> str:
+    'Ask Qwen for atomic work items explicitly stated in the transcript.'
+    transcript_rows = [
+        {
+            "turn_id": u["turn_id"],
+            "speaker": u["speaker"],
+            "start": round(u["start"], 3),
+            "end": round(u["end"], 3),
+            "text": u["text"],
+        }
+        for u in turns
+    ]
+    return f"""Extract the concrete action tasks explicitly assigned, requested, committed to,
+or stated as required in this meeting transcript.
+
+TRANSCRIPT:
+{json.dumps(transcript_rows, ensure_ascii=False)}
+
+Rules:
+- Extract actual work to be performed, not agenda items, intentions to discuss, context,
+  explanations, or reasons.
+- Use one atomic task per item. Include prerequisite and downstream tasks as separate items.
+- Include an independent task if one is explicitly stated.
+- Use concise task descriptions beginning with an action verb.
+- An owner may be populated only when a person or team is explicitly named as responsible
+  in the quoted transcript turn. Do not infer an owner from the speaker ID or voice.
+- Every task must cite one transcript turn and an exact quote copied from that turn.
+- Do not invent deadlines, owners, tasks, or evidence.
+- Preserve task order by the first explicit occurrence in the transcript.
+- If a task is repeated, return it once and use the clearest direct assignment/commitment quote.
+
+Return JSON only:
+{{"tasks":[{{"task":"Test the payment API","owner":"Priya","reported_by":"SPEAKER_00",
+"source_turn_id":"U3","evidence_quote":"Priya, please test the payment API"}}]}}
+If no explicit action tasks exist: {{"tasks":[]}}"""
+
+
+def _run_qwen_task_json(prompt: str, model, tokenizer, max_new_tokens: int = 500) -> Dict[str, Any]:
+    'Run Qwen for transcript task extraction and parse its JSON response.'
+    import torch
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You extract only explicit meeting action tasks with exact transcript evidence. "
+                "Output valid JSON only. Never infer task owners."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
+    formatted = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
+    )
+    inputs = tokenizer(formatted, return_tensors="pt", truncation=True, max_length=4096)
+    device = next(model.parameters()).device
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+    with torch.no_grad():
+        output_ids = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+    response = tokenizer.decode(
+        output_ids[0, inputs["input_ids"].shape[1]:],
+        skip_special_tokens=True,
+    )
+    return _extract_json_payload(response, "tasks")
+
+
+def extract_transcript_action_tasks(
+    turns: List[Dict[str, Any]],
+    model,
+    tokenizer,
+) -> List[Dict[str, Any]]:
+    'Create Phase 2 tasks from exact, transcript-quoted Qwen extractions.'
+    if not turns:
+        return []
+
+    raw_tasks = []
+    for chunk in _transcript_chunks(turns):
+        parsed = _run_qwen_task_json(
+            _build_task_extraction_prompt(chunk), model, tokenizer
+        )
+        chunk_tasks = parsed.get("tasks", [])
+        if isinstance(chunk_tasks, list):
+            raw_tasks.extend(chunk_tasks)
+
+    turn_lookup = {t["turn_id"]: t for t in turns}
+    tasks = []
+    seen = set()
+
+    for raw in raw_tasks:
+        if not isinstance(raw, dict):
+            continue
+
+        task_text = re.sub(r"\s+", " ", str(raw.get("task") or "")).strip()
+        turn_id = str(raw.get("source_turn_id") or "").strip()
+        quote = str(raw.get("evidence_quote") or "").strip()
+
+        if not task_text or not turn_id or not quote or turn_id not in turn_lookup:
+            continue
+
+        turn = turn_lookup[turn_id]
+        if _norm(quote) not in _norm(turn.get("text", "")):
+            continue
+
+        task_key = _norm(task_text)
+        if not task_key or task_key in seen:
+            continue
+        seen.add(task_key)
+
+        owner = raw.get("owner")
+        if owner:
+            owner_text = str(owner).strip()
+            if (
+                not owner_text
+                or _norm(owner_text) not in _norm(quote)
+                or not re.search(
+                    r"\b(?:please|assigned|responsible|you will|you must|must)\b",
+                    quote,
+                    flags=re.IGNORECASE,
+                )
+            ):
+                owner = None
+            else:
+                owner = owner_text
+        else:
+            owner = None
+
+        tasks.append({
+            "task_id": f"T{len(tasks) + 1}",
+            "task": task_text,
+            "task_normalization": "qwen_transcript_task",
+            "task_role_candidate": "UNSPECIFIED",
+            "source_claim_number": None,
+            "owner": owner,
+            "reported_by": turn.get("speaker"),
+            "status": "VERIFIED",
+            "verification_method": "EXACT_TRANSCRIPT_QUOTE",
+            "source_claim": None,
+            "source_start": _float(turn.get("start")),
+            "source_end": _float(turn.get("end")),
+            "source_evidence": {
+                "text": quote,
+                "start": _float(turn.get("start")),
+                "end": _float(turn.get("end")),
+                "speaker": turn.get("speaker"),
+                "turn_id": turn_id,
+                "verification_method": "EXACT_NORMALIZED_SUBSTRING",
+            },
+        })
+
+    return tasks
+
+
 
 def _build_prompt(tasks: List[Dict[str, Any]], turns: List[Dict[str, Any]]) -> str:
     task_rows = [{"task_id": t["task_id"], "task": t["task"], "reported_by": t.get("reported_by"),
@@ -241,8 +470,12 @@ def validate_and_verify_dependencies(raw_dependencies: List[Dict[str, Any]], tas
             continue
         turn = turn_lookup[turn_id]
         premise = turn["text"]
-        hypothesis = (f'The meeting explicitly states that "{by_id[source]["task"]}" must be completed '
-                      f'before "{by_id[target]["task"]}" can proceed.')
+        prerequisite_task = str(by_id[source]["task"]).strip().rstrip(" .;:")
+        dependent_task = str(by_id[target]["task"]).strip().rstrip(" .;:")
+        # Keep the NLI hypothesis short and focused on the prerequisite relation.
+        hypothesis = (
+            f'"{prerequisite_task}" must happen before "{dependent_task}".'
+        )
         if nli_verifier is None:
             candidate = {"prerequisite_id": source, "dependent_id": target, "relation": raw.get("relation", "MUST_PRECEDE"),
                          "evidence_text": quote, "evidence_start": turn["start"], "evidence_end": turn["end"],
@@ -283,7 +516,6 @@ def _build_q4_checkout_dependency_views(utterances):
     NLI-verified Phase 2 DAG. Every edge stores the exact supporting utterance.
     """
     from task_dependency_dag import build_dag_result
-    turns = _merge_transcript_turns(utterances or [])
     if not turns:
         return {}
 
@@ -375,10 +607,17 @@ def extract_action_dependency_dag(claims: List[Dict[str, Any]], utterances: Opti
                                   model=None, tokenizer=None, nli_verifier=None,
                                   entailment_threshold: float = 0.80) -> Dict[str, Any]:
     from task_dependency_dag import build_dag_result
-    tasks = prepare_action_tasks(claims, require_verified=True)
+    # Build Phase 2 task nodes from explicit transcript assignments/commitments.
+    # This prevents Phase 1 event labels or claim statuses from suppressing valid
+    # work items. Each accepted node must still carry an exact transcript quote.
+    turns = _merge_transcript_turns(utterances or [])
+    if model is not None and tokenizer is not None and turns:
+        tasks = extract_transcript_action_tasks(turns, model, tokenizer)
+    else:
+        tasks = prepare_action_tasks(claims, require_verified=True)
     if not tasks:
         result = {"status": "no_verified_action_tasks", "tasks": [], "dependencies": [], "candidate_dependencies": [],
-                  "dag": build_dag_result([], []), "message": "No VERIFIED ACTION claims were available for Phase 2."}
+                  "dag": build_dag_result([], []), "message": "No transcript-quoted action tasks (or verified Phase 1 ACTION fallback tasks) were available for Phase 2."}
         return _attach_transcript_dependency_views(result, utterances)
     if model is None or tokenizer is None:
         result = {"status": "skipped_no_model", "tasks": tasks, "dependencies": [], "candidate_dependencies": [],
@@ -438,9 +677,21 @@ if __name__ == "__main__":
     sample = [
         {"claim": "Finalize the design", "event_type": "ACTION", "status": "VERIFIED", "speaker": "SPEAKER_01"},
         {"claim": "Implement the design", "event_type": "ACTION", "status": "FLAGGED", "speaker": "SPEAKER_02"},
+        {"claim": "you said the third party payment gateway has strict limits", "event_type": "ACTION", "status": "VERIFIED", "speaker": "SPEAKER_01"},
+        {"claim": "I can't finalize the UI design until you test the API", "event_type": "ACTION", "status": "VERIFIED", "speaker": "SPEAKER_02"},
     ]
     tasks = prepare_action_tasks(sample)
-    assert len(tasks) == 1 and tasks[0]["owner"] is None and tasks[0]["reported_by"] == "SPEAKER_01"
+    assert len(tasks) == 3
+    assert tasks[0]["task"] == "Finalize the design"
+    assert tasks[0]["owner"] is None and tasks[0]["reported_by"] == "SPEAKER_01"
+    assert tasks[1]["task"] == "Test the API"
+    assert tasks[1]["task_role_candidate"] == "PREREQUISITE"
+    assert tasks[2]["task"] == "Finalize the UI design"
+    assert tasks[2]["task_role_candidate"] == "DEPENDENT"
+    assert tasks[2]["source_claim"] == "I can't finalize the UI design until you test the API"
+    assert tasks[2]["task_normalization"] == "blocked_action_normalized"
+    assert tasks[1]["owner"] is None and tasks[2]["owner"] is None
+    assert _extract_blocked_prerequisite("I can't ship this until Friday") is None
     turns = _merge_transcript_turns([{"speaker": "A", "start": 1, "end": 1.3, "text": "Finalize"},
                                      {"speaker": "A", "start": 1.3, "end": 1.6, "text": "design"}])
     assert len(turns) == 1 and turns[0]["text"] == "Finalize design"
