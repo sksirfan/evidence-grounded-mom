@@ -16,7 +16,9 @@ in the Google Drive ,
 keep these files in drive Required for startup Load.
 
 MoM_Project/data/transcripts/ES2004a_structured_mom_claims.json
+
 MoM_Project/outputs/verified/ES2004a_M9_full_multi_attribute_verification.json
+
 MoM_Project/outputs/pdf/ES2005a.Mix-Headset_Verifiable_Meeting_Minutes.pdf
 
 ---
@@ -46,5 +48,8 @@ Something similar to-
 |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
 |  https://cradle-define-corpus-investment.trycloudflare.com   |
 
+---
 Step 9 : Streamlit Dashboard Starts ,Preprocessed Meeting ES2004a details will be loaded.
+
+---
 Step 10 : Upload a new meeting to Process and find Dag Details and MOM.
