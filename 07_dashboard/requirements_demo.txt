@@ -24,6 +24,8 @@ pillow==11.3.0
 tqdm==4.67.3
 
 streamlit==1.65.0
+networkx>=3.2,<4.0
+reportlab>=4.0,<5.0
 
 # PyTorch/CUDA is intentionally handled by the Colab runtime.
 # Verified working runtime:

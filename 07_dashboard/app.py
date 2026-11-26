@@ -1,22 +1,26 @@
 
 import json
-import sys
 from pathlib import Path
 import streamlit as st
 
+st.set_page_config(
+    page_title="Verifiable Meeting Minutes",
+    page_icon="📝",
+    layout="wide"
+)
+
+
 
 # ============================================================
-# SHARED PROJECT PATH CONFIGURATION
+# SHARED PROJECT ROOT (same config used by meeting_pipeline.py)
 # ============================================================
 
-# config.py is stored at the repository root, one level above this file.
+import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 import config as project_config
-
-# All dashboard reads and writes use the same root as meeting_pipeline.py.
 PROJECT_ROOT = Path(project_config.PROJECT_DIR)
 
 
@@ -1100,6 +1104,22 @@ def render_processed_meeting(
         "claims"
     ]
 
+    # --------------------------------------------------------
+    # Phase 2 — Evidence-grounded task dependency DAG
+    # Render only; this does not run inference.
+    # --------------------------------------------------------
+    raw_result = normalized.get("raw", {})
+    phase2_result = load_saved_phase2_result(
+        raw_result=raw_result,
+        result_path=result_path,
+        meeting_id=meeting_id,
+    )
+    render_phase2_dependency_analysis(
+        phase2_result,
+        meeting_id=meeting_id,
+    )
+
+
     if view_mode == "live":
 
         st.subheader(
@@ -1119,22 +1139,6 @@ def render_processed_meeting(
        
     st.caption(
         f"Result file: {Path(result_path).name}"
-    )
-
-    # --------------------------------------------------------
-    # Phase 2 — Evidence-grounded task dependency DAG
-    # Embedded result first; companion Phase 2 artifact as fallback.
-    # Render only; this does not run inference.
-    # --------------------------------------------------------
-    raw_result = normalized.get("raw", {})
-    phase2_result = load_saved_phase2_result(
-        raw_result=raw_result,
-        result_path=result_path,
-        meeting_id=meeting_id,
-    )
-    render_phase2_dependency_analysis(
-        phase2_result,
-        meeting_id=meeting_id,
     )
 
 
@@ -1486,8 +1490,7 @@ def render_processed_meeting(
 # LOAD DATA
 # ============================================================
 
-# Validate all mandatory legacy dashboard inputs together so the user gets
-# one actionable message instead of repeated FileNotFoundError crashes.
+# Validate both mandatory legacy dashboard inputs together.
 REQUIRED_DASHBOARD_FILES = {
     "Structured MoM claims": CLAIMS_PATH,
     "Multi-attribute verification results": VERIFICATION_PATH,
@@ -1497,20 +1500,15 @@ missing_dashboard_files = [
     for label, path in REQUIRED_DASHBOARD_FILES.items()
     if not path.is_file()
 ]
-
 if missing_dashboard_files:
-    st.error(
-        "The dashboard cannot load its existing ES2004a results because "
-        "required files are missing from the selected data folder."
-    )
+    st.error("The dashboard cannot load the ES2004a results because required files are missing.")
     st.write(f"**Selected project/data root:** `{PROJECT_ROOT}`")
     st.write("**Missing required files:**")
     for label, path in missing_dashboard_files:
         st.write(f"- {label}: `{path}`")
     st.info(
-        "Keep these files in the Google Drive project folder, then check "
-        "that Drive is mounted and MOM_PROJECT_ROOT points to that folder. "
-        "No files have been regenerated or modified."
+        "Make sure Google Drive for Desktop is running and synced, or set "
+        "MOM_PROJECT_ROOT to the exact MoM_Project folder."
     )
     st.stop()
 
@@ -1900,11 +1898,6 @@ def save_uploaded_meeting(uploaded_file):
     return output_path
 
 
-st.set_page_config(
-    page_title="Verifiable Meeting Minutes",
-    page_icon="📝",
-    layout="wide"
-)
 
 
 # ============================================================
@@ -1966,29 +1959,27 @@ meeting_metadata = {
 # ============================================================
 
 import sys
-import torch
-
-# Colab compatibility: this application does not use Transformers vision
-# features. Avoid importing an incompatible optional torchvision installation.
-import transformers.utils.import_utils as _transformers_import_utils
-_transformers_import_utils._torchvision_available = False
-
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM
-)
+import importlib
 
 DASHBOARD_DIR = Path(__file__).resolve().parent
-
 if str(DASHBOARD_DIR) not in sys.path:
-    sys.path.insert(
-        0,
-        str(DASHBOARD_DIR)
-    )
+    sys.path.insert(0, str(DASHBOARD_DIR))
 
-import meeting_pipeline as mp
-import dependency_extraction as phase2_dependency_extraction
+# The DAG viewer is lightweight. The speech/LLM pipeline is imported only
+# when the user explicitly starts a new AI processing job.
 import task_dependency_dag as phase2_dag
+mp = None
+phase2_dependency_extraction = None
+
+
+def _load_ai_processing_modules():
+    """Load the heavyweight AI stack only for the processing workflow."""
+    global mp, phase2_dependency_extraction
+    if mp is None:
+        mp = importlib.import_module("meeting_pipeline")
+    if phase2_dependency_extraction is None:
+        phase2_dependency_extraction = importlib.import_module("dependency_extraction")
+    return mp, phase2_dependency_extraction
 
 
 @st.cache_resource(show_spinner=False)
@@ -1997,15 +1988,17 @@ def load_qwen_generator():
     Load the final Qwen generator once per Streamlit runtime.
     """
 
-    model_name = (
-        "Qwen/Qwen2.5-3B-Instruct"
-    )
+    # Imported here rather than at dashboard startup so Intel Macs can
+    # display existing meeting outputs without installing PyTorch.
+    import torch
 
-    tokenizer = (
-        AutoTokenizer.from_pretrained(
-            model_name
-        )
-    )
+    # This app does not use Transformers vision features.
+    import transformers.utils.import_utils as _transformers_import_utils
+    _transformers_import_utils._torchvision_available = False
+    from transformers import AutoTokenizer, AutoModelForCausalLM
+
+    model_name = "Qwen/Qwen2.5-3B-Instruct"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     if torch.cuda.is_available():
 
@@ -2069,6 +2062,8 @@ def process_uploaded_meeting(
         -> BGE/FAISS evidence retrieval
         -> NLI/consistency verification
     """
+
+    _load_ai_processing_modules()
 
     audio_path = Path(
         audio_path
