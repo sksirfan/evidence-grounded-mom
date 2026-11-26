@@ -1,27 +1,23 @@
 
 import json
+import sys
 from pathlib import Path
 import streamlit as st
 
 
 # ============================================================
-# PROJECT PATH
+# SHARED PROJECT PATH CONFIGURATION
 # ============================================================
 
-# Google Colab / Linux
-if Path("/content/drive/MyDrive").exists():
-    PROJECT_ROOT = Path(
-        "/content/drive/MyDrive/MTechIndProj/MoM_Project"
-    )
+# config.py is stored at the repository root, one level above this file.
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
-# Windows Google Drive for Desktop
-elif Path(r"G:\My Drive\MTechIndProj\MoM_Project").exists():
-    PROJECT_ROOT = Path(
-        r"G:\My Drive\MTechIndProj\MoM_Project"
-    )
+import config as project_config
 
-else:
-    PROJECT_ROOT = Path.cwd().parent
+# All dashboard reads and writes use the same root as meeting_pipeline.py.
+PROJECT_ROOT = Path(project_config.PROJECT_DIR)
 
 
 # ============================================================
@@ -29,23 +25,17 @@ else:
 # ============================================================
 
 CLAIMS_PATH = (
-    PROJECT_ROOT
-    / "data"
-    / "transcripts"
+    project_config.TRANSCRIPT_DIR
     / "ES2004a_structured_mom_claims.json"
 )
 
 VERIFICATION_PATH = (
-    PROJECT_ROOT
-    / "outputs"
-    / "verified"
+    project_config.VERIFIED_OUTPUT_DIR
     / "ES2004a_M9_full_multi_attribute_verification.json"
 )
 
 PDF_PATH = (
-    PROJECT_ROOT
-    / "outputs"
-    / "pdf"
+    project_config.PDF_OUTPUT_DIR
     / "ES2004a_Verifiable_Meeting_Minutes.pdf"
 )
 
@@ -1496,6 +1486,34 @@ def render_processed_meeting(
 # LOAD DATA
 # ============================================================
 
+# Validate all mandatory legacy dashboard inputs together so the user gets
+# one actionable message instead of repeated FileNotFoundError crashes.
+REQUIRED_DASHBOARD_FILES = {
+    "Structured MoM claims": CLAIMS_PATH,
+    "Multi-attribute verification results": VERIFICATION_PATH,
+}
+missing_dashboard_files = [
+    (label, path)
+    for label, path in REQUIRED_DASHBOARD_FILES.items()
+    if not path.is_file()
+]
+
+if missing_dashboard_files:
+    st.error(
+        "The dashboard cannot load its existing ES2004a results because "
+        "required files are missing from the selected data folder."
+    )
+    st.write(f"**Selected project/data root:** `{PROJECT_ROOT}`")
+    st.write("**Missing required files:**")
+    for label, path in missing_dashboard_files:
+        st.write(f"- {label}: `{path}`")
+    st.info(
+        "Keep these files in the Google Drive project folder, then check "
+        "that Drive is mounted and MOM_PROJECT_ROOT points to that folder. "
+        "No files have been regenerated or modified."
+    )
+    st.stop()
+
 with open(CLAIMS_PATH, "r", encoding="utf-8") as f:
     claims_data = json.load(f)
 
@@ -1960,7 +1978,7 @@ from transformers import (
     AutoModelForCausalLM
 )
 
-DASHBOARD_DIR = PROJECT_ROOT / "07_dashboard"
+DASHBOARD_DIR = Path(__file__).resolve().parent
 
 if str(DASHBOARD_DIR) not in sys.path:
     sys.path.insert(
