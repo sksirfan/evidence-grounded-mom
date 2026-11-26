@@ -1,34 +1,33 @@
 """Central project paths for the MoM application.
 
-Project data and generated outputs live in Google Drive when the configured
-Drive project folder exists. Code remains in the GitHub clone.
-
-Override the automatic selection by setting MOM_PROJECT_ROOT to an absolute
-path before launching Streamlit or importing the pipeline.
+Code stays in the GitHub clone. Meeting data and generated outputs are read
+from the shared Google Drive project folder when it is available.
+Set MOM_PROJECT_ROOT to override automatic discovery.
 """
 
 import os
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent
-
-# Explicit override takes precedence, which is useful on either laptop.
 _explicit_root = os.environ.get("MOM_PROJECT_ROOT", "").strip()
 
-# Use the shared Google Drive folder only when that exact project directory
-# exists. Merely having Drive mounted is not enough.
+_mac_drive_candidates = sorted(
+    (Path.home() / "Library/CloudStorage").glob(
+        "GoogleDrive-*/My Drive/MTechIndProj/MoM_Project"
+    )
+)
+_legacy_mac_drive = Path.home() / "Google Drive/My Drive/MTechIndProj/MoM_Project"
 _drive_candidates = [
     Path("/content/drive/MyDrive/MTechIndProj/MoM_Project"),
     Path(r"G:\My Drive\MTechIndProj\MoM_Project"),
+    *_mac_drive_candidates,
+    _legacy_mac_drive,
 ]
 
 if _explicit_root:
     PROJECT_DIR = Path(_explicit_root).expanduser().resolve()
 else:
-    _drive_root = next(
-        (candidate for candidate in _drive_candidates if candidate.is_dir()),
-        None,
-    )
+    _drive_root = next((p for p in _drive_candidates if p.is_dir()), None)
     PROJECT_DIR = (_drive_root or REPOSITORY_ROOT).resolve()
 
 # Data directories
@@ -62,11 +61,9 @@ LIVE_OUTPUT_DIR = OUTPUT_DIR / "live"
 TRANSCRIPT_OUTPUT_DIR = OUTPUT_DIR / "transcripts"
 PHASE2_DAG_OUTPUT_DIR = OUTPUT_DIR / "phase2_dag"
 
-# Evaluation
 EVALUATION_DIR = PROJECT_DIR / "evaluation_results"
 
-# Hardware detection is optional; importing path configuration should not
-# fail merely because PyTorch is unavailable in a lightweight environment.
+# Importing config must work in the lightweight Intel Mac environment.
 try:
     import torch
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
