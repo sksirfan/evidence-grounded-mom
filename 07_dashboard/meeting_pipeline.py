@@ -14,26 +14,35 @@ import numpy as np
 
 
 # ============================================================
-# PROJECT PATHS
+# SHARED PROJECT PATHS
 # ============================================================
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+# Resolve config.py from the GitHub repository, then use the same data root
+# selected by the Streamlit dashboard (Google Drive or local repository).
+import sys
 
-DATA_DIR = PROJECT_DIR / "data"
-MODEL_DIR = PROJECT_DIR / "models"
-OUTPUT_DIR = PROJECT_DIR / "outputs"
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
-RAW_DIR = DATA_DIR / "raw"
-VAD_DIR = DATA_DIR / "vad"
-TRANSCRIPT_DIR = DATA_DIR / "transcripts"
-EVIDENCE_DIR = DATA_DIR / "evidence"
-EMBEDDING_DIR = DATA_DIR / "embeddings"
-FAISS_DIR = DATA_DIR / "faiss"
+import config as project_config
 
-ASR_MODEL_DIR = MODEL_DIR / "asr"
-DIARIZATION_MODEL_DIR = MODEL_DIR / "diarization"
-BGE_MODEL_DIR = MODEL_DIR / "bge"
-LLM_MODEL_DIR = MODEL_DIR / "llm"
+PROJECT_DIR = Path(project_config.PROJECT_DIR)
+DATA_DIR = project_config.DATA_DIR
+MODEL_DIR = project_config.MODEL_DIR
+OUTPUT_DIR = project_config.OUTPUT_DIR
+
+RAW_DIR = project_config.RAW_DATA_DIR
+VAD_DIR = project_config.VAD_DIR
+TRANSCRIPT_DIR = project_config.TRANSCRIPT_DIR
+EVIDENCE_DIR = project_config.EVIDENCE_DIR
+EMBEDDING_DIR = project_config.EMBEDDING_DIR
+FAISS_DIR = project_config.FAISS_DIR
+
+ASR_MODEL_DIR = project_config.ASR_MODEL_DIR
+DIARIZATION_MODEL_DIR = project_config.DIARIZATION_MODEL_DIR
+BGE_MODEL_DIR = project_config.BGE_MODEL_DIR
+LLM_MODEL_DIR = project_config.LLM_MODEL_DIR
 
 
 # ============================================================
