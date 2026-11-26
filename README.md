@@ -215,79 +215,7 @@ Recommended:
 
 The dashboard can run on CPU when loading already processed meeting results.
 
----
-
-## 8. Installation
-
-Clone the repository:
-
-```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-cd MoM_Project
-```
-
-### Windows
-
-```bash
-py -3.10 -m venv MTechMoM_env
-MTechMoM_env\Scripts\activate
-```
-
-### Linux / macOS
-
-```bash
-python3.10 -m venv MTechMoM_env
-source MTechMoM_env/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r 07_dashboard/requirements_demo.txt
-```
-
-Check the environment:
-
-```bash
-python 07_dashboard/demo_environment_check.py
-```
-
----
-
-## 9. Hugging Face Authentication
-
-Some models require Hugging Face authentication.
-
-Authenticate using:
-
-```bash
-huggingface-cli login
-```
-
-Enter your Hugging Face access token when prompted.
-
-**Never commit the Hugging Face token to GitHub.**
-
-Do not place tokens inside source files, notebooks, README files, or committed configuration files.
-
----
-
-## 10. Run the Dashboard
-
-From the project root:
-
-```bash
-cd 07_dashboard
-python -m streamlit run app.py
-```
-
-The dashboard normally opens at:
-
-`http://localhost:8501`
-
----
-
-## 11. Process a New Meeting
+## 08. Process a New Meeting
 
 Select **Process New Meeting** in the Streamlit dashboard and upload a meeting audio file.
 
@@ -323,7 +251,7 @@ Claim Verification
 
 ---
 
-## 12. VERIFIED vs FLAGGED
+## 09. VERIFIED vs FLAGGED
 
 ### VERIFIED
 
@@ -337,7 +265,7 @@ A FLAGGED claim does not automatically mean that the claim is false. It means th
 
 ---
 
-## 13. Evidence Playback
+## 10. Evidence Playback
 
 A key feature of the project is evidence-level traceability.
 
@@ -349,7 +277,7 @@ This provides an auditable connection between generated MoM claims and their sou
 
 ---
 
-## 14. PDF Export
+## 11. PDF Export
 
 The dashboard supports PDF export of generated meeting minutes and verification results.
 
@@ -357,7 +285,7 @@ PDF generation uses **ReportLab**.
 
 ---
 
-## 15. Dataset
+## 12. Dataset
 
 Experiments use the **AMI Meeting Corpus**.
 
@@ -378,7 +306,7 @@ Users should obtain the dataset from its official source and follow its licensin
 
 ---
 
-## 16. Experimental Results
+## 13. Experimental Results
 
 ### ES2004a
 
@@ -408,7 +336,7 @@ Controlled validation achieved **5/5 correct (100%)**.
 
 ---
 
-## 17. CPU vs GPU
+## 14. CPU vs GPU
 
 The dashboard can run on CPU when viewing previously processed meetings.
 
@@ -416,7 +344,7 @@ GPU is strongly recommended for complete processing because the pipeline include
 
 ---
 
-## 18. Speaker Names
+## 15. Speaker Names
 
 Diarization initially produces labels such as:
 
@@ -426,7 +354,7 @@ Where participant information is available, these labels can be mapped to actual
 
 ---
 
-## 19. Research Contribution
+## 16. Research Contribution
 
 The main contribution is not simply automatic meeting summarization.
 
@@ -445,7 +373,7 @@ The system therefore moves from automatic meeting summarization toward evidence-
 
 ---
 
-## 20. Current Status
+## 17. Current Status
 
 Implemented:
 
@@ -466,7 +394,7 @@ Implemented:
 
 ---
 
-## 21. Important Notes
+## 18. Important Notes
 
 Meeting audio, model files, embeddings, FAISS indexes, and generated outputs can be large. Not every generated artifact should be committed to GitHub.
 
@@ -476,7 +404,7 @@ Never commit API keys, Hugging Face tokens, passwords, or other credentials.
 
 ---
 
-## 22. Acknowledgements
+## 19. Acknowledgements
 
 This project uses open-source technologies including:
 
@@ -496,11 +424,9 @@ Please refer to the respective projects and model cards for their licenses and c
 ---
 
 ## Author
-
+Sunaina Kouser S
 M.Tech Data Science and Artificial Intelligence
-
 PES University
-
 ---
 
 ## License
